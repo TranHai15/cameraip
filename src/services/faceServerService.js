@@ -14,14 +14,14 @@ class FaceServerService {
       return;
     }
 
-    const serverUrl = settings.faceServerUrl || "http://localhost:5000";
+    const serverUrl = settings.faceServerUrl || `http://localhost:${settings.faceServerPort}`;
     console.log("Connecting to face-server:", serverUrl);
 
     this.socket = io(serverUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
+      reconnectionDelay: settings.socketReconnectDelay,
+      reconnectionAttempts: settings.socketReconnectAttempts,
     });
 
     this.socket.on("connect", () => {
@@ -74,7 +74,7 @@ class FaceServerService {
           this.socket.emit("start_capture");
           console.log("📢 Sent start_capture event");
         }
-      }, 1000);
+      }, settings.socketReconnectDelay);
       return;
     }
 
@@ -120,7 +120,7 @@ class FaceServerService {
   }
 
   getVideoFeedUrl() {
-    const serverUrl = settings.faceServerUrl || "http://localhost:5000";
+    const serverUrl = settings.faceServerUrl || `http://localhost:${settings.faceServerPort}`;
     return `${serverUrl}/video_feed`;
   }
 }

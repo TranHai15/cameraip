@@ -44,13 +44,13 @@ export default function CheckinOut() {
     checkOut: 0,
   });
   const [statusRes, setStatusRes] = useState({
-    message: "Quý khách vui lòng quét thẻ căn cước để thực hiện checkin",
+    message: settings.defaultMessages.waitingCard,
     type: TYPE.ERROR,
     Score: null,
   });
   const [faceStatus, setFaceStatus] = useState({
     status: "idle", // idle, waiting, adjusting, ready, capturing, error
-    message: "Chờ quét thẻ...",
+    message: settings.defaultMessages.waitingFaceServer,
   });
 
   const listCheckinRef = useRef(listCheckin);
@@ -58,7 +58,7 @@ export default function CheckinOut() {
   const filterDataRef = useRef(filterData);
   const refCallingApi = useRef(isCallingApi);
   const delayDetectFace = useRef(delayCC);
-  const scoreCompareFace = 60;
+  const scoreCompareFace = settings.scoreCompare;
   let delayChamCong = null;
 
   useEffect(() => {
@@ -185,7 +185,7 @@ export default function CheckinOut() {
         setCurrentCheckin({});
         currentRefCheckin.current = null;
         setStatusRes({
-          message: "Quý khách vui lòng quét thẻ căn cước để thực hiện checkin",
+          message: settings.defaultMessages.waitingCard,
           type: TYPE.ERROR,
           Score: null,
         });
@@ -211,7 +211,7 @@ export default function CheckinOut() {
           FaceImg: "", // Reset ảnh chụp
         };
         setStatusRes({
-          message: "Vui lòng đưa mặt vào khung để chụp ảnh",
+          message: settings.defaultMessages.waitingFace,
           type: null,
           Score: null,
         });
@@ -227,12 +227,11 @@ export default function CheckinOut() {
 
       if (data.Status === "FAILURE") {
         setLoadingDataScan(false);
-        setStatusRes({
-          message:
-            "Xảy ra lỗi trong quá trình đọc thông tin thẻ căn cước, vui lòng thử lại!",
-          type: TYPE.ERROR,
-          Score: null,
-        });
+          setStatusRes({
+            message: settings.defaultMessages.cardError,
+            type: TYPE.ERROR,
+            Score: null,
+          });
         setStateScan(null);
       }
     };
@@ -339,7 +338,7 @@ export default function CheckinOut() {
         if (response && response.data && response.data.Status > 0) {
           setLoadingDataScan(false);
           setStatusRes({
-            message: "Checkin thành công!",
+            message: settings.defaultMessages.checkinSuccess,
             type: TYPE.SUCCESS,
             Score: score,
           });
@@ -357,19 +356,18 @@ export default function CheckinOut() {
             setCurrentCheckin({});
             currentRefCheckin.current = null;
             setStatusRes({
-              message:
-                "Quý khách vui lòng quét thẻ căn cước để thực hiện checkin",
+              message: settings.defaultMessages.waitingCard,
               type: TYPE.ERROR,
               Score: null,
             });
             setStateScan(null);
             setFaceStatus({
               status: "idle",
-              message: "Chờ quét thẻ...",
+              message: settings.defaultMessages.waitingFaceServer,
             });
             // Dừng capture nếu đang chạy
             faceServerService.stopCapture();
-          }, 3000); // Sau 3 giây hiển thị thông báo thành công
+          }, settings.successMessageDelay); // Sau khi hiển thị thông báo thành công
         } else {
           refCallingApi.current = false;
           setIsCallingApi(false);
@@ -438,8 +436,7 @@ export default function CheckinOut() {
             refCallingApi.current = false;
             setIsCallingApi(false);
             setStatusRes({
-              message:
-                res?.data?.Status || "Khuôn mặt không khớp. Vui lòng thử lại.",
+              message: res?.data?.Status || settings.defaultMessages.faceNotMatch,
               type: TYPE.ERROR,
               Score: res?.data?.Score,
             });
@@ -452,8 +449,8 @@ export default function CheckinOut() {
               ) {
                 faceServerService.startCapture();
               }
-            }, 3000);
-          }, 2000);
+            }, settings.retryCaptureDelay);
+          }, settings.compareFaceDelay);
         }
       })
       .catch((err) => {
@@ -466,7 +463,7 @@ export default function CheckinOut() {
           if (currentRefCheckin.current && currentRefCheckin.current.SoCMND) {
             faceServerService.startCapture();
           }
-        }, 3000);
+        }, settings.retryCaptureDelay);
       });
   };
 
@@ -495,8 +492,8 @@ export default function CheckinOut() {
     <div
       className={"camera-container"}
       style={{
-        width: 240,
-        height: 240,
+        width: settings.cameraWidth,
+        height: settings.cameraHeight,
         position: "relative",
         display: "flex",
         alignItems: "center",
@@ -507,8 +504,8 @@ export default function CheckinOut() {
         src={videoFeedUrl}
         alt="Video feed"
         style={{
-          width: "240px",
-          height: "240px",
+          width: `${settings.cameraWidth}px`,
+          height: `${settings.cameraHeight}px`,
           objectFit: "cover",
         }}
         onError={(e) => {
@@ -571,7 +568,7 @@ export default function CheckinOut() {
                 <div className="face-wrapper">
                   <div className="card">
                     <Avatar
-                      size={240}
+                      size={settings.avatarSize}
                       src={currentCheckin.imageChanDung}
                       className="greeting-avatar"
                     />
@@ -619,7 +616,7 @@ export default function CheckinOut() {
                       </div>
                     ) : (
                       <Avatar
-                        size={240}
+                        size={settings.avatarSize}
                         src={currentCheckin.FaceImg}
                         className="greeting-avatar"
                       />

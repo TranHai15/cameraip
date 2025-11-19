@@ -13,7 +13,7 @@ const checkinApi = {
     return apiPost(apiUrl.checkinv4, { ...param });
   },
   GetList: (param) => {
-    return apiGet(apiUrl.getlistpaging, { ...param, Type: 2 });
+    return apiGet(apiUrl.getlistpaging, { ...param, Type: settings.checkinListType });
   },
   CompareFace: (param) => {
     return apiPost(apiUrl.compareface, { ...param });
