@@ -338,24 +338,13 @@ export default function CheckinOut() {
       .then((response) => {
         if (response && response.data && response.data.Status > 0) {
           setLoadingDataScan(false);
-          refCallingApi.current = false;
-          setIsCallingApi(false);
-
-          // Dừng capture ngay lập tức
-          faceServerService.stopCapture();
-
-          // Reset ảnh chụp ngay lập tức (ẩn ảnh chụp, chỉ giữ lại ảnh CCCD để hiển thị)
-          setCurrentCheckin((prev) => ({
-            ...prev,
-            FaceImg: "", // Xóa ảnh chụp ngay để hiển thị lại video stream
-          }));
-
           setStatusRes({
             message: "Checkin thành công!",
             type: TYPE.SUCCESS,
             Score: score,
           });
-
+          refCallingApi.current = false;
+          setIsCallingApi(false);
           getTotalCheckInOut();
           setFilterData((prevFilter) => ({ ...prevFilter, PageNumber: 1 }));
           GetListCheckin({
@@ -365,7 +354,6 @@ export default function CheckinOut() {
 
           // Dọn dẹp: Reset ảnh và thông tin sau khi check-in thành công
           setTimeout(() => {
-            // Reset toàn bộ state
             setCurrentCheckin({});
             currentRefCheckin.current = null;
             setStatusRes({
@@ -379,8 +367,8 @@ export default function CheckinOut() {
               status: "idle",
               message: "Chờ quét thẻ...",
             });
-            setLoadingDataScan(false);
-            console.log("✅ Đã reset hoàn toàn sau khi check-in thành công");
+            // Dừng capture nếu đang chạy
+            faceServerService.stopCapture();
           }, 3000); // Sau 3 giây hiển thị thông báo thành công
         } else {
           refCallingApi.current = false;
