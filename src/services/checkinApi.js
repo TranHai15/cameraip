@@ -5,7 +5,7 @@ const apiUrl = {
   checkinv4: settings.apiInOutv4 + "VaoRa/Vao",
   getlistpaging: settings.apiInOutv4 + "VaoRa/GetListPageBySearch",
   compareface: `http://localhost:${settings.socketAPIPort}/api/v4/compare`,
-  tonghopngay: settings.apiInOut + "VaoRa/TongHopTheoNga",
+  tonghopngay: settings.apiInOut + "VaoRa/TongHopTheoNgay",
 };
 
 const checkinApi = {

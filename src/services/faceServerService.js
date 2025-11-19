@@ -8,7 +8,7 @@ class FaceServerService {
     this.isConnected = false;
   }
 
-  connect(onCaptureSuccess, onError) {
+  connect(onCaptureSuccess, onError, onFaceStatus) {
     if (this.socket && this.isConnected) {
       console.log("Face server already connected");
       return;
@@ -52,6 +52,14 @@ class FaceServerService {
           console.error("Error processing captured image:", error);
           if (onError) onError(error);
         }
+      }
+    });
+
+    // Nhận event status và message từ BE
+    this.socket.on("face_status", (data) => {
+      console.log("📊 Received face_status:", data);
+      if (onFaceStatus) {
+        onFaceStatus(data);
       }
     });
   }

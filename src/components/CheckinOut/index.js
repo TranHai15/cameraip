@@ -1,14 +1,6 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-} from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { MainWrapper } from "./style";
-import {
-  Avatar,
-  Spin,
-  message,
-} from "antd";
+import { Avatar, Spin, message } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -56,7 +48,11 @@ export default function CheckinOut() {
     type: TYPE.ERROR,
     Score: null,
   });
-  
+  const [faceStatus, setFaceStatus] = useState({
+    status: "idle", // idle, waiting, adjusting, ready, capturing, error
+    message: "Chờ quét thẻ...",
+  });
+
   const listCheckinRef = useRef(listCheckin);
   const currentRefCheckin = useRef(null);
   const filterDataRef = useRef(filterData);
@@ -86,7 +82,7 @@ export default function CheckinOut() {
     if (container[0]) {
       container[0].addEventListener("scroll", ScrollContainer);
     }
-    
+
     GetListCheckin(filterData);
     handleConnectSocketScan();
 
@@ -94,15 +90,26 @@ export default function CheckinOut() {
     faceServerService.connect(
       // onCaptureSuccess: Khi nhận được ảnh từ face-server
       (base64Image) => {
-        console.log('📸 Received image from face-server');
+        console.log("📸 Received image from face-server");
         if (!refCallingApi.current && currentRefCheckin.current) {
           handleCompareFace(base64Image, currentRefCheckin.current);
         }
       },
       // onError: Xử lý lỗi kết nối
       (error) => {
-        console.error('❌ Face-server error:', error);
-        message.warning('Không thể kết nối đến face-server. Vui lòng kiểm tra lại.');
+        console.error("❌ Face-server error:", error);
+        message.warning(
+          "Không thể kết nối đến face-server. Vui lòng kiểm tra lại."
+        );
+      },
+      // onFaceStatus: Nhận status và message từ BE
+      (data) => {
+        if (data && data.status && data.message) {
+          setFaceStatus({
+            status: data.status,
+            message: data.message,
+          });
+        }
       }
     );
 
@@ -116,7 +123,7 @@ export default function CheckinOut() {
     }, 1000);
 
     getTotalCheckInOut();
-    
+
     return () => {
       if (delayChamCong) clearInterval(delayChamCong);
       if (socketRef.current) {
@@ -168,13 +175,13 @@ export default function CheckinOut() {
 
     socketRef.current.onmessage = (event) => {
       const data = isJsonString(event.data) ? JSON.parse(event.data) : {};
-      
+
       if (data.EventName === "READ") {
         setLoadingDataScan(true);
       }
 
       if (data.NewState === "EMPTY") {
-        console.log('set empty');
+        console.log("set empty");
         setCurrentCheckin({});
         currentRefCheckin.current = null;
         setStatusRes({
@@ -209,21 +216,20 @@ export default function CheckinOut() {
           Score: null,
         });
         setStateScan(null);
-        console.log('set success');
+        console.log("set success");
         setCurrentCheckin(dataReaded);
         currentRefCheckin.current = dataReaded;
-        
-        // Gửi lệnh bắt đầu chụp ảnh từ face-server
-        setTimeout(() => {
-          faceServerService.startCapture();
-          console.log('📢 Started face capture');
-        }, 500);
+
+        // Gửi lệnh bắt đầu chụp ảnh từ face-server ngay lập tức (bỏ delay)
+        faceServerService.startCapture();
+        console.log("📢 Started face capture");
       }
-      
+
       if (data.Status === "FAILURE") {
         setLoadingDataScan(false);
         setStatusRes({
-          message: "Xảy ra lỗi trong quá trình đọc thông tin thẻ căn cước, vui lòng thử lại!",
+          message:
+            "Xảy ra lỗi trong quá trình đọc thông tin thẻ căn cước, vui lòng thử lại!",
           type: TYPE.ERROR,
           Score: null,
         });
@@ -305,7 +311,7 @@ export default function CheckinOut() {
     param.AnhChanDungBase64 = param.imageChanDung;
     console.log(param.LyDoGap, "param.LyDoGap", currentCheckin);
     delete param.GioVao;
-    
+
     if (param.LyDoGap === undefined) {
       message.destroy();
       message.warning("Chưa chọn lý do vào cơ quan");
@@ -332,19 +338,50 @@ export default function CheckinOut() {
       .then((response) => {
         if (response && response.data && response.data.Status > 0) {
           setLoadingDataScan(false);
+          refCallingApi.current = false;
+          setIsCallingApi(false);
+
+          // Dừng capture ngay lập tức
+          faceServerService.stopCapture();
+
+          // Reset ảnh chụp ngay lập tức (ẩn ảnh chụp, chỉ giữ lại ảnh CCCD để hiển thị)
+          setCurrentCheckin((prev) => ({
+            ...prev,
+            FaceImg: "", // Xóa ảnh chụp ngay để hiển thị lại video stream
+          }));
+
           setStatusRes({
             message: "Checkin thành công!",
             type: TYPE.SUCCESS,
             Score: score,
           });
-          refCallingApi.current = false;
-          setIsCallingApi(false);
+
           getTotalCheckInOut();
           setFilterData((prevFilter) => ({ ...prevFilter, PageNumber: 1 }));
           GetListCheckin({
             ...filterData,
             PageNumber: 1,
           });
+
+          // Dọn dẹp: Reset ảnh và thông tin sau khi check-in thành công
+          setTimeout(() => {
+            // Reset toàn bộ state
+            setCurrentCheckin({});
+            currentRefCheckin.current = null;
+            setStatusRes({
+              message:
+                "Quý khách vui lòng quét thẻ căn cước để thực hiện checkin",
+              type: TYPE.ERROR,
+              Score: null,
+            });
+            setStateScan(null);
+            setFaceStatus({
+              status: "idle",
+              message: "Chờ quét thẻ...",
+            });
+            setLoadingDataScan(false);
+            console.log("✅ Đã reset hoàn toàn sau khi check-in thành công");
+          }, 3000); // Sau 3 giây hiển thị thông báo thành công
         } else {
           refCallingApi.current = false;
           setIsCallingApi(false);
@@ -368,12 +405,11 @@ export default function CheckinOut() {
 
   const logEventErrorSocket = (event) => {
     let reason = "";
-    if (event.code === 1000)
-      reason = "Normal closure";
-    else if (event.code === 1001)
-      reason = 'An endpoint is "going away"';
+    if (event.code === 1000) reason = "Normal closure";
+    else if (event.code === 1001) reason = 'An endpoint is "going away"';
     else if (event.code === 1002)
-      reason = "An endpoint is terminating the connection due to a protocol error";
+      reason =
+        "An endpoint is terminating the connection due to a protocol error";
     else if (event.code === 1006)
       reason = "The connection was closed abnormally";
     else reason = "Unknown reason";
@@ -383,7 +419,7 @@ export default function CheckinOut() {
 
   const handleRetryDelay = () => {
     setdelayCC(1);
-    console.log('delay detect face');
+    console.log("delay detect face");
     setTimeout(() => {
       setdelayCC(0);
     }, 5000);
@@ -394,7 +430,7 @@ export default function CheckinOut() {
     setCurrentCheckin({ ...currentRefCheckin.current, FaceImg: img });
     refCallingApi.current = true;
     setIsCallingApi(true);
-    
+
     checkinApi
       .CompareFace({
         AnhCCCD: currentCheckin.imageChanDung,
@@ -405,7 +441,7 @@ export default function CheckinOut() {
           setStateScan(STATE_SCAN.SUCCESS);
           CheckIn(currentCheckin, res.data.Score);
         } else {
-          console.log('set compare face fail');
+          console.log("set compare face fail");
           handleRetryDelay();
           setTimeout(() => {
             setCurrentCheckin({ ...currentRefCheckin.current, FaceImg: "" });
@@ -414,14 +450,18 @@ export default function CheckinOut() {
             refCallingApi.current = false;
             setIsCallingApi(false);
             setStatusRes({
-              message: res?.data?.Status || "Khuôn mặt không khớp. Vui lòng thử lại.",
+              message:
+                res?.data?.Status || "Khuôn mặt không khớp. Vui lòng thử lại.",
               type: TYPE.ERROR,
               Score: res?.data?.Score,
             });
             setLoadingCheckIn(false);
             // Cho phép chụp lại sau khi thất bại
             setTimeout(() => {
-              if (currentRefCheckin.current && currentRefCheckin.current.SoCMND) {
+              if (
+                currentRefCheckin.current &&
+                currentRefCheckin.current.SoCMND
+              ) {
                 faceServerService.startCapture();
               }
             }, 3000);
@@ -442,11 +482,39 @@ export default function CheckinOut() {
       });
   };
 
-  // Video stream từ face-server
+  // Video stream từ face-server - Hiển thị ngay khi mount
   const videoFeedUrl = faceServerService.getVideoFeedUrl();
-  
+
+  // Hàm lấy màu theo status
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "waiting":
+        return "#ff4d4f"; // Đỏ
+      case "adjusting":
+        return "#faad14"; // Vàng
+      case "ready":
+        return "#52c41a"; // Xanh
+      case "capturing":
+        return "#1890ff"; // Xanh dương
+      case "error":
+        return "#ff4d4f"; // Đỏ
+      default:
+        return "#8c8c8c"; // Xám
+    }
+  };
+
   const cameraContentScan = (
-    <div className={"camera-container"} style={{ width: 240, height: 240 }}>
+    <div
+      className={"camera-container"}
+      style={{
+        width: 240,
+        height: 240,
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <img
         src={videoFeedUrl}
         alt="Video feed"
@@ -456,10 +524,31 @@ export default function CheckinOut() {
           objectFit: "cover",
         }}
         onError={(e) => {
-          console.error('Error loading video feed:', e);
-          e.target.src = ''; // Clear src on error
+          console.error("Error loading video feed:", e);
+          e.target.src = ""; // Clear src on error
         }}
       />
+      {/* Overlay message từ BE */}
+      {faceStatus.status !== "idle" && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 10,
+            left: 0,
+            right: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            color: getStatusColor(faceStatus.status),
+            padding: "8px 12px",
+            textAlign: "center",
+            fontSize: "12px",
+            fontWeight: "bold",
+            borderRadius: "4px",
+            zIndex: 10,
+          }}
+        >
+          {faceStatus.message}
+        </div>
+      )}
     </div>
   );
 
@@ -471,7 +560,8 @@ export default function CheckinOut() {
 
   const COLOR_SUCCESS = "#fff";
   const COLOR_ERROR = "#fff";
-  const checkResultScore = statusRes.Score >= 0 && typeof statusRes.Score === "number";
+  const checkResultScore =
+    statusRes.Score >= 0 && typeof statusRes.Score === "number";
 
   return (
     <div>
@@ -510,16 +600,20 @@ export default function CheckinOut() {
                     }`}
                   >
                     <div className={checkResultScore ? "score-circle" : ""}>
-                      {checkResultScore
-                        ? statusRes.Score >= scoreCompareFace
-                          ? <CheckCircleOutlined />
-                          : <CloseCircleOutlined />
-                        : null}
+                      {checkResultScore ? (
+                        statusRes.Score >= scoreCompareFace ? (
+                          <CheckCircleOutlined />
+                        ) : (
+                          <CloseCircleOutlined />
+                        )
+                      ) : null}
                     </div>
                     <p
                       style={{
                         color:
-                          statusRes.Score >= scoreCompareFace ? "green" : "black",
+                          statusRes.Score >= scoreCompareFace
+                            ? "green"
+                            : "black",
                       }}
                     >
                       {checkResultScore
@@ -530,8 +624,11 @@ export default function CheckinOut() {
                     </p>
                   </div>
                   <div className="card-liveview">
-                    {!currentCheckin.FaceImg && currentCheckin.SoCMND ? (
-                      <div className={`screen-wrapper`}>{cameraContentScan}</div>
+                    {!currentCheckin.FaceImg ? (
+                      // Hiển thị video stream ngay cả khi chưa có thẻ
+                      <div className={`screen-wrapper`}>
+                        {cameraContentScan}
+                      </div>
                     ) : (
                       <Avatar
                         size={240}
@@ -647,4 +744,3 @@ export default function CheckinOut() {
     </div>
   );
 }
-
