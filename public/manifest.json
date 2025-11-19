@@ -1,0 +1,16 @@
+{
+  "short_name": "Check-in",
+  "name": "Hệ thống Check-in",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#4b6aff",
+  "background_color": "#ffffff"
+}
+

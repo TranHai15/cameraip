@@ -1,0 +1,42 @@
+{
+  "name": "checkin-standalone",
+  "version": "1.0.0",
+  "description": "Standalone Check-in System with Face Recognition",
+  "private": true,
+  "dependencies": {
+    "@ant-design/icons": "^5.2.6",
+    "antd": "^4.24.16",
+    "axios": "^1.6.0",
+    "moment": "^2.30.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-redux": "^7.2.9",
+    "react-router-dom": "^5.3.4",
+    "redux": "^4.2.1",
+    "redux-thunk": "^2.4.2",
+    "socket.io-client": "^4.8.1",
+    "styled-components": "^5.3.11"
+  },
+  "devDependencies": {
+    "react-app-rewired": "^2.2.1",
+    "react-scripts": "^5.0.1"
+  },
+  "scripts": {
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired --max_old_space_size=8192 build",
+    "test": "react-app-rewired test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
