@@ -17,14 +17,33 @@ function App() {
   const authState = useSelector((state) => state.Auth);
 
   useEffect(() => {
-    // Kiểm tra nếu đã đăng nhập từ trước (có token trong localStorage)
-    if (isAuthenticated() && !authState.idToken) {
-      const user = getUser();
-      const { accessToken } = getToken();
+    console.log("🚀 [APP_INIT] Ứng dụng checkin được khởi tạo");
 
-      if (user && accessToken) {
-        dispatch(authActions.loginSuccess(user, accessToken));
+    // Kiểm tra nếu đã đăng nhập từ trước (có token trong localStorage)
+    console.log("🔍 [APP_INIT] Kiểm tra trạng thái đăng nhập...");
+    if (isAuthenticated()) {
+      console.log("✅ [APP_INIT] Đã tìm thấy token xác thực");
+      if (!authState.idToken) {
+        console.log("🔄 [APP_INIT] Chưa có idToken trong Redux, đang khôi phục...");
+        const user = getUser();
+        const { accessToken } = getToken();
+
+        if (user && accessToken) {
+          console.log("✅ [APP_INIT] Khôi phục thông tin user:", {
+            username: user.username,
+            email: user.email,
+            hasAccessToken: !!accessToken
+          });
+          dispatch(authActions.loginSuccess(user, accessToken));
+          console.log("✅ [APP_INIT] Đã khôi phục trạng thái đăng nhập thành công");
+        } else {
+          console.log("❌ [APP_INIT] Không thể khôi phục thông tin user hoặc accessToken");
+        }
+      } else {
+        console.log("✅ [APP_INIT] Đã có idToken trong Redux, bỏ qua khôi phục");
       }
+    } else {
+      console.log("❌ [APP_INIT] Không tìm thấy token xác thực, chuyển hướng đến login");
     }
   }, [dispatch, authState.idToken]);
 

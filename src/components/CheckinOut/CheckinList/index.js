@@ -28,8 +28,8 @@ const CheckinList = ({
         {listCheckin.length === 0 ? (
           <></>
         ) : (
-          listCheckin.map((item) => (
-            <div className="customer-card" key={item.id}>
+          listCheckin.map((item, index) => (
+            <div className="customer-card" key={index}>
               <img
                 src={
                   item.AnhChanDungBase64 !== ""
@@ -63,4 +63,3 @@ const CheckinList = ({
 };
 
 export default CheckinList;
-

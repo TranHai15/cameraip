@@ -10,7 +10,6 @@ import faceServerService from "../../services/faceServerService";
 import CardImage from "./CardImage";
 import VideoStream from "./VideoStream";
 import CapturedImage from "./CapturedImage";
-import ScoreIndicator from "./ScoreIndicator";
 import UserInfo from "./UserInfo";
 import StatusMessage from "./StatusMessage";
 import Statistics from "./Statistics";
@@ -80,28 +79,36 @@ export default function CheckinOut() {
   }, [filterData]);
 
   useEffect(() => {
+    console.log("📋 [INIT] Load danh sách check-in ban đầu...");
     GetListCheckin(filterData);
+    console.log("🔌 [INIT] Khởi tạo kết nối WebSocket quét thẻ...");
     handleConnectSocketScan();
 
     // Kết nối face-server
+    console.log("🔌 [INIT] Khởi tạo kết nối face-server...");
     faceServerService.connect(
       // onCaptureSuccess: Khi nhận được ảnh từ face-server
       (base64Image) => {
-        console.log("📸 Received image from face-server");
+        console.log("📸 [INIT] Nhận ảnh từ face-server, bắt đầu so sánh...");
         if (!refCallingApi.current && currentRefCheckin.current) {
+          console.log("✅ [INIT] Điều kiện hợp lệ, gọi handleCompareFace");
           handleCompareFace(base64Image, currentRefCheckin.current);
+        } else {
+          console.log("⚠️ [INIT] Bỏ qua ảnh vì đang xử lý API hoặc chưa có thông tin thẻ");
         }
       },
       // onError: Xử lý lỗi kết nối
       (error) => {
-        console.error("❌ Face-server error:", error);
+        console.error("❌ [INIT] Lỗi kết nối face-server:", error);
         message.warning(
           "Không thể kết nối đến face-server. Vui lòng kiểm tra lại."
         );
       },
       // onFaceStatus: Nhận status và message từ BE
       (data) => {
+        console.log("📊 [INIT] Nhận face status:", data);
         if (data && data.status && data.message) {
+          console.log(`🔄 [INIT] Cập nhật face status: ${data.status} - ${data.message}`);
           setFaceStatus({
             status: data.status,
             message: data.message,
@@ -119,34 +126,50 @@ export default function CheckinOut() {
       });
     }, 1000);
 
+    console.log("📊 [INIT] Load thống kê check-in/check-out ban đầu...");
     getTotalCheckInOut();
 
     return () => {
-      if (delayChamCong) clearInterval(delayChamCong);
+      console.log("🧹 [CLEANUP] Dọn dẹp resources khi component unmount...");
+      if (delayChamCong) {
+        console.log("⏰ [CLEANUP] Clear interval delayChamCong");
+        clearInterval(delayChamCong);
+      }
       if (socketRef.current) {
+        console.log("🔌 [CLEANUP] Đóng kết nối WebSocket");
         socketRef.current.close();
       }
       // Disconnect face-server
+      console.log("🔌 [CLEANUP] Ngắt kết nối face-server");
       faceServerService.disconnect();
+      console.log("✅ [CLEANUP] Hoàn thành dọn dẹp");
     };
   }, []);
 
   const getTotalCheckInOut = () => {
+    console.log("📊 [STATS] Lấy thống kê check-in/check-out trong ngày...");
     checkinApi
       .TongHopNgay()
       .then((res) => {
+        console.log("📥 [STATS] Response thống kê:", res);
         if (res && res.data && res.data.Status > 0) {
           const data = res.data.Data;
+          console.log("✅ [STATS] Thống kê thành công:", {
+            tongCheckIn: data.Tong,
+            daVe: data.DaVe
+          });
           setTotalCheckinOut({
             checkIn: data.Tong,
             checkOut: data.DaVe,
           });
         } else {
+          console.log("❌ [STATS] Lỗi lấy thống kê:", res?.data?.Message);
           message.destroy();
           message.warning(res?.data?.Message || "Lỗi khi lấy thống kê");
         }
       })
       .catch((err) => {
+        console.log("❌ [STATS] Lỗi API thống kê:", err);
         message.destroy();
         message.warning(err.toString());
       });
@@ -162,23 +185,29 @@ export default function CheckinOut() {
   };
 
   const handleConnectSocketScan = () => {
+    console.log(`🔌 [SOCKET_CARD] Bắt đầu kết nối WebSocket đến port ${settings.socketPort}...`);
     const socket = new WebSocket(`ws://localhost:${settings.socketPort}`);
     socketRef.current = socket;
-    console.log("start connect websocket");
+    console.log("🔌 [SOCKET_CARD] WebSocket instance được tạo");
 
     socket.onopen = () => {
-      console.log("socket connected port ", settings.socketPort);
+      console.log(`✅ [SOCKET_CARD] Kết nối WebSocket thành công đến port ${settings.socketPort}`);
+      console.log("📡 [SOCKET_CARD] Sẵn sàng nhận dữ liệu từ thiết bị quét thẻ CCCD");
     };
 
     socketRef.current.onmessage = (event) => {
+      console.log("📨 [SOCKET_CARD] Nhận message từ WebSocket:", event.data);
       const data = isJsonString(event.data) ? JSON.parse(event.data) : {};
+      console.log("📨 [SOCKET_CARD] Dữ liệu đã parse:", data);
 
       if (data.EventName === "READ") {
+        console.log("🔄 [SOCKET_CARD] Event READ - Bắt đầu đọc thẻ...");
         setLoadingDataScan(true);
       }
 
       if (data.NewState === "EMPTY") {
-        console.log("set empty");
+        console.log("🗑️ [SOCKET_CARD] Event EMPTY - Thẻ đã được lấy ra khỏi thiết bị");
+        console.log("🔄 [SOCKET_CARD] Reset toàn bộ trạng thái...");
         setCurrentCheckin({});
         currentRefCheckin.current = null;
         setStatusRes({
@@ -189,12 +218,26 @@ export default function CheckinOut() {
         setStateScan(null);
         setShowCardImage(false); // Ẩn ảnh thẻ khi thẻ đã lấy ra
         // Dừng chụp ảnh khi thẻ đã lấy ra
+        console.log("⏹️ [SOCKET_CARD] Dừng capture ảnh khuôn mặt");
         faceServerService.stopCapture();
+        console.log("✅ [SOCKET_CARD] Đã reset xong, chờ thẻ mới");
       }
 
       if (data.EventName === "CARD_RESULT") {
+        console.log("✅ [SOCKET_CARD] Event CARD_RESULT - Đọc thẻ thành công!");
+        console.log("📋 [SOCKET_CARD] Thông tin thẻ CCCD:", {
+          hoVaTen: data.PersonalInfo.personName,
+          soCMND: data.PersonalInfo.idCode,
+          ngaySinh: data.PersonalInfo.dateOfBirth,
+          gioiTinh: data.PersonalInfo.gender,
+          hasChipFace: !!data.ChipFace,
+          hasResidencePlace: !!data.PersonalInfo.residencePlace
+        });
+
         setLoadingDataScan(false);
         const checkinAt = Date.now();
+        console.log(`🕐 [SOCKET_CARD] Timestamp checkin: ${checkinAt} (${new Date(checkinAt).toLocaleString()})`);
+
         const dataReaded = {
           HoVaTen: data.PersonalInfo.personName,
           GioiTinh: data.PersonalInfo.gender,
@@ -208,47 +251,62 @@ export default function CheckinOut() {
           LyDoGap: 1,
           FaceImg: "", // Reset ảnh chụp
         };
+
+        console.log("📝 [SOCKET_CARD] Dữ liệu checkin đã chuẩn bị:", {
+          hoVaTen: dataReaded.HoVaTen,
+          soCMND: dataReaded.SoCMND,
+          lyDoGap: dataReaded.LyDoGap
+        });
+
         setStatusRes({
           message: settings.defaultMessages.waitingFace,
           type: null,
           Score: null,
         });
         setStateScan(null);
-        console.log("set success");
+        console.log("🔄 [SOCKET_CARD] Chuyển trạng thái: chờ chụp khuôn mặt");
         setCurrentCheckin(dataReaded);
         currentRefCheckin.current = dataReaded;
 
         // Hiển thị ảnh thẻ trong 2 giây, sau đó ẩn đi
+        console.log("🖼️ [SOCKET_CARD] Hiển thị ảnh thẻ CCCD trong 2 giây");
         setShowCardImage(true);
         setTimeout(() => {
+          console.log("🖼️ [SOCKET_CARD] Ẩn ảnh thẻ, chuyển sang camera");
           setShowCardImage(false);
         }, 2000); // 2 giây
 
         // Gửi lệnh bắt đầu chụp ảnh từ face-server ngay lập tức (bỏ delay)
+        console.log("📷 [SOCKET_CARD] Khởi động face-server capture...");
         faceServerService.startCapture();
-        console.log("📢 Started face capture");
+        console.log("✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt");
       }
 
       if (data.Status === "FAILURE") {
+        console.log("❌ [SOCKET_CARD] Event FAILURE - Lỗi đọc thẻ CCCD");
+        console.log("🔄 [SOCKET_CARD] Reset trạng thái do lỗi...");
         setLoadingDataScan(false);
-          setStatusRes({
-            message: settings.defaultMessages.cardError,
-            type: TYPE.ERROR,
-            Score: null,
-          });
+        setStatusRes({
+          message: settings.defaultMessages.cardError,
+          type: TYPE.ERROR,
+          Score: null,
+        });
         setStateScan(null);
+        console.log("✅ [SOCKET_CARD] Đã reset, chờ đọc thẻ lại");
       }
     };
 
     socketRef.current.onerror = (error) => {
+      console.log("❌ [SOCKET_CARD] Lỗi WebSocket:", error);
       setLoadingDataScan(false);
-      console.log("❌ Lỗi: ", error);
     };
 
     socketRef.current.onclose = (event) => {
+      console.log("🔌 [SOCKET_CARD] Kết nối WebSocket đã đóng");
       setLoadingDataScan(false);
-      logEventErrorSocket(event);
-      console.log("🔌 Kết nối đã đóng");
+      const reason = logEventErrorSocket(event);
+      console.log(`🔍 [SOCKET_CARD] Lý do đóng kết nối: ${reason}`);
+      console.log("⚠️ [SOCKET_CARD] Cần kiểm tra thiết bị quét thẻ CCCD");
     };
   };
 
@@ -272,6 +330,13 @@ export default function CheckinOut() {
   };
 
   const GetListCheckin = (filterData) => {
+    console.log("📋 [LIST] Lấy danh sách check-in...");
+    console.log("🔍 [LIST] Filter:", {
+      pageSize: filterData.PageSize,
+      pageNumber: filterData.PageNumber,
+      type: settings.checkinListType
+    });
+
     setLoadingCheckIn(true);
     checkinApi
       .GetList({
@@ -279,21 +344,35 @@ export default function CheckinOut() {
         PageNumber: filterData.PageNumber,
       })
       .then((response) => {
+        console.log("📥 [LIST] Response danh sách:", response);
         setLoadingCheckIn(false);
         if (response && response.data && response.data.Status > 0) {
           let newListCheckin = [...listCheckinRef.current];
+          const newItems = response.data.Data || [];
+          const TotalRow = response.data.TotalRow;
 
           if (filterData.PageNumber === 1) {
-            newListCheckin = response.data.Data;
+            console.log("📄 [LIST] Load trang đầu tiên, thay thế danh sách");
+            newListCheckin = newItems;
           } else {
-            response.data.Data.forEach((item) => newListCheckin.push(item));
+            console.log(`📄 [LIST] Load trang ${filterData.PageNumber}, thêm vào danh sách hiện tại`);
+            newItems.forEach((item) => newListCheckin.push(item));
           }
-          const TotalRow = response.data.TotalRow;
+
+          console.log("✅ [LIST] Cập nhật danh sách thành công:", {
+            totalItems: newListCheckin.length,
+            totalRow: TotalRow,
+            newItemsCount: newItems.length
+          });
+
           setListCheckin(newListCheckin);
           setFilterData((prevFilter) => ({ ...prevFilter, TotalRow }));
+        } else {
+          console.log("❌ [LIST] Lỗi lấy danh sách:", response?.data?.Message);
         }
       })
       .catch((err) => {
+        console.log("❌ [LIST] Lỗi API danh sách:", err);
         setLoadingCheckIn(false);
         message.destroy();
         console.log("error notification");
@@ -302,7 +381,18 @@ export default function CheckinOut() {
   };
 
   const CheckIn = (currentCheckin, score) => {
+    console.log("📝 [CHECKIN_API] Bắt đầu xử lý check-in...");
+    console.log("👤 [CHECKIN_API] Thông tin check-in:", {
+      hoVaTen: currentCheckin.HoVaTen,
+      soCMND: currentCheckin.SoCMND,
+      lyDoGap: currentCheckin.LyDoGap,
+      score: score,
+      checkinAt: new Date(currentCheckin.checkinAt).toLocaleString()
+    });
+
     const param = { ...currentCheckin };
+    console.log("🔄 [CHECKIN_API] Chuyển đổi định dạng ngày tháng...");
+
     param.NgaySinh =
       param.NgaySinh !== ""
         ? moment(param.NgaySinh, "DD/MM/YYYY").format("YYYY-MM-DD")
@@ -312,34 +402,68 @@ export default function CheckinOut() {
         ? moment(param.NgayCapCMND, "DD/MM/YYYY").format("YYYY-MM-DD")
         : "";
     param.AnhChanDungBase64 = param.imageChanDung;
-    console.log(param.LyDoGap, "param.LyDoGap", currentCheckin);
+
+    console.log("📅 [CHECKIN_API] Ngày đã chuyển đổi:", {
+      ngaySinh: param.NgaySinh,
+      ngayCapCMND: param.NgayCapCMND
+    });
+
+    console.log(`🔍 [CHECKIN_API] LyDoGap: ${param.LyDoGap}`);
     delete param.GioVao;
 
     if (param.LyDoGap === undefined) {
+      console.log("❌ [CHECKIN_API] Thiếu lý do vào cơ quan");
       message.destroy();
       message.warning("Chưa chọn lý do vào cơ quan");
       return;
     } else {
       if (param.LyDoGap === 2) {
+        console.log("🔍 [CHECKIN_API] LyDoGap = 2, kiểm tra đối tượng gặp...");
         if (param.GapCanBo === undefined) {
+          console.log("❌ [CHECKIN_API] Thiếu đối tượng gặp");
           message.destroy();
           message.warning("Chưa chọn đối tượng gặp");
           return;
         } else {
+          console.log("✅ [CHECKIN_API] Có thông tin đối tượng gặp:", param.GapCanBo);
           const arr = param.GapCanBo.split("_");
           param.GapCanBo = arr[0];
           param.DonViCaNhan = arr[1];
+          console.log("📝 [CHECKIN_API] Đã parse GapCanBo:", {
+            gapCanBo: param.GapCanBo,
+            donViCaNhan: param.DonViCaNhan
+          });
         }
       } else {
+        console.log("ℹ️ [CHECKIN_API] LyDoGap != 2, set GapCanBo = 0");
         param.GapCanBo = 0;
         param.DonViCaNhan = 0;
       }
     }
 
+    console.log("🌐 [CHECKIN_API] Gọi API Checkinv4...");
+    console.log("📤 [CHECKIN_API] Parameters gửi lên:", {
+      hoVaTen: param.HoVaTen,
+      soCMND: param.SoCMND,
+      lyDoGap: param.LyDoGap,
+      gapCanBo: param.GapCanBo,
+      donViCaNhan: param.DonViCaNhan,
+      ngaySinh: param.NgaySinh,
+      ngayCapCMND: param.NgayCapCMND,
+      hasAnhChanDung: !!param.AnhChanDungBase64,
+      score: score
+    });
+
     checkinApi
       .Checkinv4(param)
       .then((response) => {
+        console.log("📥 [CHECKIN_API] Response từ API Checkinv4:", response);
+        console.log("📊 [CHECKIN_API] Status:", response?.data?.Status, "Message:", response?.data?.Message);
+
         if (response && response.data && response.data.Status > 0) {
+          console.log("✅ [CHECKIN_API] CHECK-IN THÀNH CÔNG!");
+          console.log("🎉 [CHECKIN_API] Người dùng đã được check-in thành công");
+
           setLoadingDataScan(false);
           setStatusRes({
             message: settings.defaultMessages.checkinSuccess,
@@ -348,6 +472,8 @@ export default function CheckinOut() {
           });
           refCallingApi.current = false;
           setIsCallingApi(false);
+
+          console.log("📊 [CHECKIN_API] Cập nhật thống kê và danh sách...");
           getTotalCheckInOut();
           setFilterData((prevFilter) => ({ ...prevFilter, PageNumber: 1 }));
           GetListCheckin({
@@ -355,8 +481,10 @@ export default function CheckinOut() {
             PageNumber: 1,
           });
 
-          // Dọn dẹp: Reset ảnh và thông tin sau khi check-in thành công
+          // Dọn dẹp: Reset toàn bộ state sau khi check-in thành công
+          console.log(`⏳ [CHECKIN_API] Chờ ${settings.successMessageDelay}ms trước khi reset...`);
           setTimeout(() => {
+            console.log("🧹 [CHECKIN_API] Reset toàn bộ trạng thái sau thành công...");
             setCurrentCheckin({});
             currentRefCheckin.current = null;
             setStatusRes({
@@ -364,16 +492,22 @@ export default function CheckinOut() {
               type: TYPE.ERROR,
               Score: null,
             });
-            setStateScan(null);
+            setStateScan(0); // Reset về giá trị ban đầu
             setShowCardImage(false); // Ẩn ảnh thẻ
+            setLoadingDataScan(false); // Đảm bảo không còn loading
+            setdelayCC(0); // Reset delay counter
             setFaceStatus({
               status: "idle",
               message: settings.defaultMessages.waitingFaceServer,
             });
             // Dừng capture nếu đang chạy
             faceServerService.stopCapture();
+            console.log("✅ [CHECKIN_API] Đã reset xong, sẵn sàng cho người dùng tiếp theo");
           }, settings.successMessageDelay); // Sau khi hiển thị thông báo thành công
         } else {
+          console.log("❌ [CHECKIN_API] CHECK-IN THẤT BẠI!");
+          console.log("📝 [CHECKIN_API] Lỗi:", response?.data?.Message || "Lỗi không xác định");
+
           refCallingApi.current = false;
           setIsCallingApi(false);
           setLoadingDataScan(false);
@@ -382,10 +516,27 @@ export default function CheckinOut() {
             type: TYPE.ERROR,
             Score: score,
           });
+
+          // Reset toàn bộ dữ liệu khi check-in thất bại để chuẩn bị cho lần mới
+          console.log("🧹 [CHECKIN_API] Reset trạng thái sau thất bại...");
+          setTimeout(() => {
+            setCurrentCheckin({}); // Reset hoàn toàn thông tin người dùng
+            currentRefCheckin.current = null;
+            setStateScan(0); // Reset về giá trị ban đầu
+            setdelayCC(0); // Reset delay counter
+            setFaceStatus({
+              status: "idle",
+              message: settings.defaultMessages.waitingFaceServer,
+            });
+            // Dừng capture và chờ quét thẻ mới
+            faceServerService.stopCapture();
+            console.log("✅ [CHECKIN_API] Đã reset xong, chờ người dùng thử lại");
+          }, 2000); // Hiển thị lỗi trong 2 giây rồi reset
         }
       })
       .catch((error) => {
-        console.log("error checkin");
+        console.log("❌ [CHECKIN_API] LỖI API Checkinv4:", error);
+        console.log("🔧 [CHECKIN_API] Kiểm tra kết nối đến API server");
         setLoadingDataScan(false);
         message.destroy();
         message.error(error.toString());
@@ -403,55 +554,101 @@ export default function CheckinOut() {
         "An endpoint is terminating the connection due to a protocol error";
     else if (event.code === 1006)
       reason = "The connection was closed abnormally";
-    else reason = "Unknown reason";
-    console.log(reason);
+    else reason = `Unknown reason (code: ${event.code})`;
+    console.log(`🔌 [SOCKET_ERROR] WebSocket đóng kết nối: ${reason}`);
     return reason;
   };
 
   const handleRetryDelay = () => {
+    console.log("⏳ [RETRY] Bắt đầu delay retry cho face detection...");
+    console.log("🔄 [RETRY] Set delay counter = 1, sẽ reset sau 5 giây");
     setdelayCC(1);
-    console.log("delay detect face");
     setTimeout(() => {
+      console.log("✅ [RETRY] Reset delay counter về 0, cho phép retry");
       setdelayCC(0);
     }, 5000);
   };
 
   const handleCompareFace = async (img, currentCheckin) => {
+    console.log("🔍 [FACE_COMPARE] Bắt đầu so sánh khuôn mặt...");
+    console.log("👤 [FACE_COMPARE] Thông tin người dùng:", {
+      hoVaTen: currentCheckin.HoVaTen,
+      soCMND: currentCheckin.SoCMND,
+      hasAnhCCCD: !!currentCheckin.imageChanDung,
+      hasAnhChanDung: !!img
+    });
+
     setLoadingDataScan(true);
     setCurrentCheckin({ ...currentRefCheckin.current, FaceImg: img });
     refCallingApi.current = true;
     setIsCallingApi(true);
 
+    console.log(`🌐 [FACE_COMPARE] Gọi API CompareFace đến port ${settings.socketAPIPort}...`);
+    const compareParams = {
+      AnhCCCD: currentCheckin.imageChanDung,
+      AnhChanDung: img,
+    };
+    console.log("📤 [FACE_COMPARE] Parameters:", {
+      anhCCCDLength: compareParams.AnhCCCD?.length || 0,
+      anhChanDungLength: compareParams.AnhChanDung?.length || 0
+    });
+
     checkinApi
-      .CompareFace({
-        AnhCCCD: currentCheckin.imageChanDung,
-        AnhChanDung: img,
-      })
+      .CompareFace(compareParams)
       .then((res) => {
-        if (res && res.data && res.data.Score > scoreCompareFace) {
+        console.log("📥 [FACE_COMPARE] Response từ API CompareFace:", res);
+        console.log("🔍 [FACE_COMPARE] Debug response structure:");
+        console.log("- res exists:", !!res);
+        console.log("- res.data exists:", !!res?.data);
+        console.log("- res.data.Score:", res?.data?.Score);
+        console.log("- res.data.Score type:", typeof res?.data?.Score);
+        console.log("- Full res.data:", JSON.stringify(res?.data, null, 2));
+
+        const score = res?.data?.Score;
+        const scoreNum = Number(score); // Convert to number just in case
+        console.log(`🎯 [FACE_COMPARE] Điểm số so khớp: ${score} (type: ${typeof score})`);
+        console.log(`🔢 [FACE_COMPARE] Score as number: ${scoreNum} (type: ${typeof scoreNum})`);
+        console.log(`📊 [FACE_COMPARE] So sánh: ${scoreNum} > ${scoreCompareFace} = ${scoreNum > scoreCompareFace}`);
+
+        // Use scoreNum for comparison instead of score
+        if (res && res.data && scoreNum > scoreCompareFace) {
+          console.log("✅ [FACE_COMPARE] So khớp khuôn mặt THÀNH CÔNG!");
+          console.log("🔄 [FACE_COMPARE] Chuyển sang xử lý check-in...");
           setStateScan(STATE_SCAN.SUCCESS);
-          CheckIn(currentCheckin, res.data.Score);
+          // Set status thành công ngay lập tức để hiển thị CSS success
+          setStatusRes({
+            message: "Đang xử lý check-in...",
+            type: TYPE.SUCCESS,
+            Score: scoreNum,
+          });
+          CheckIn(currentCheckin, scoreNum);
         } else {
-          console.log("set compare face fail");
+          console.log("❌ [FACE_COMPARE] So khớp khuôn mặt THẤT BẠI");
+          console.log(`📊 [FACE_COMPARE] Điểm số quá thấp: ${scoreNum} <= ${scoreCompareFace}`);
+          console.log(`⚠️ [FACE_COMPARE] Debug: scoreNum=${scoreNum}, scoreCompareFace=${scoreCompareFace}, comparison=${scoreNum > scoreCompareFace}`);
           handleRetryDelay();
           setTimeout(() => {
+            console.log("🔄 [FACE_COMPARE] Reset ảnh và trạng thái...");
             setCurrentCheckin({ ...currentRefCheckin.current, FaceImg: "" });
             setStateScan(STATE_SCAN.ERROR);
             setLoadingDataScan(false);
             refCallingApi.current = false;
             setIsCallingApi(false);
             setStatusRes({
-              message: res?.data?.Status || settings.defaultMessages.faceNotMatch,
+              message:
+                res?.data?.Status || settings.defaultMessages.faceNotMatch,
               type: TYPE.ERROR,
-              Score: res?.data?.Score,
+              Score: scoreNum,
             });
             setLoadingCheckIn(false);
             // Cho phép chụp lại sau khi thất bại
+            console.log(`⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`);
             setTimeout(() => {
               if (
                 currentRefCheckin.current &&
                 currentRefCheckin.current.SoCMND
               ) {
+                console.log("📷 [FACE_COMPARE] Khởi động capture lại sau thất bại");
                 faceServerService.startCapture();
               }
             }, settings.retryCaptureDelay);
@@ -459,13 +656,17 @@ export default function CheckinOut() {
         }
       })
       .catch((err) => {
+        console.log("❌ [FACE_COMPARE] Lỗi API CompareFace:", err);
+        console.log("🔧 [FACE_COMPARE] Kiểm tra API server trên port 8010");
         handleRetryDelay();
         refCallingApi.current = false;
         setIsCallingApi(false);
         setLoadingDataScan(false);
         // Cho phép chụp lại sau khi lỗi
+        console.log(`⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`);
         setTimeout(() => {
           if (currentRefCheckin.current && currentRefCheckin.current.SoCMND) {
+            console.log("📷 [FACE_COMPARE] Khởi động capture lại sau lỗi");
             faceServerService.startCapture();
           }
         }, settings.retryCaptureDelay);
@@ -482,15 +683,35 @@ export default function CheckinOut() {
   // 4. Có ảnh chụp: Chỉ CapturedImage (ẩn CardImage và VideoStream)
   // 5. Có ảnh chụp và thành công: CapturedImage có CSS success
   // 6. Có ảnh chụp nhưng thất bại: Quay lại chỉ VideoStream (FaceImg đã được reset)
-  
+
   const hasCardData = !!currentCheckin.imageChanDung;
   const hasCapturedImage = !!currentCheckin.FaceImg;
+
+  // Ưu tiên SUCCESS trước, sau đó mới đến ERROR
   const isSuccess = statusRes.type === TYPE.SUCCESS && hasCapturedImage;
+  const isError =
+    !isSuccess &&
+    statusRes.type === TYPE.ERROR &&
+    hasCapturedImage &&
+    statusRes.Score !== null;
+
+  // Debug log
+  if (hasCapturedImage) {
+    console.log("🔍 Debug CapturedImage:", {
+      hasCapturedImage,
+      statusType: statusRes.type,
+      TYPE_SUCCESS: TYPE.SUCCESS,
+      TYPE_ERROR: TYPE.ERROR,
+      isSuccess,
+      isError,
+      score: statusRes.Score,
+      message: statusRes.message,
+    });
+  }
   // Hiển thị CardImage chỉ trong 2s đầu sau khi quét thẻ, và khi có ảnh chụp thì không hiển thị
   const shouldShowCardImage = showCardImage && !hasCapturedImage;
   // Chỉ hiển thị VideoStream sau khi ẩn CardImage (sau 2s) và chưa có ảnh chụp
   const shouldShowVideo = hasCardData && !hasCapturedImage && !showCardImage;
-  const shouldShowScore = hasCapturedImage;
 
   const COLOR_SUCCESS = "#fff";
   const COLOR_ERROR = "#fff";
@@ -509,25 +730,16 @@ export default function CheckinOut() {
             <div className="greeting-title" style={{ color: COLOR_SUCCESS }}>
               Xin chào quý khách
             </div>
-            
+
             <div className="greeting-body">
               <div className="empty"></div>
-              
+
               <div className="face-wrapper">
                 {/* Module 1: Ảnh căn cước - Chỉ hiển thị trong 2s đầu sau khi quét thẻ */}
                 {shouldShowCardImage && (
                   <CardImage
                     imageSrc={currentCheckin.imageChanDung}
                     size={settings.avatarSize}
-                  />
-                )}
-
-                {/* Module 4: Score Indicator - Chỉ hiển thị khi có ảnh chụp */}
-                {shouldShowScore && (
-                  <ScoreIndicator
-                    score={statusRes.Score}
-                    threshold={scoreCompareFace}
-                    type={statusRes.type === TYPE.SUCCESS ? "SUCCESS" : statusRes.type === TYPE.ERROR ? "ERROR" : null}
                   />
                 )}
 
@@ -541,11 +753,12 @@ export default function CheckinOut() {
                     height={settings.cameraHeight}
                   />
                 ) : hasCapturedImage ? (
-                  // Hiển thị CapturedImage khi đã có ảnh chụp
+                  // Hiển thị CapturedImage khi đã có ảnh chụp (với CSS success/error)
                   <CapturedImage
                     imageSrc={currentCheckin.FaceImg}
                     size={settings.avatarSize}
                     isSuccess={isSuccess}
+                    isError={isError}
                   />
                 ) : null}
               </div>
@@ -558,7 +771,13 @@ export default function CheckinOut() {
                 statusMessage={
                   <StatusMessage
                     message={statusRes.message}
-                    type={statusRes.type === TYPE.SUCCESS ? "SUCCESS" : statusRes.type === TYPE.ERROR ? "ERROR" : null}
+                    type={
+                      statusRes.type === TYPE.SUCCESS
+                        ? "SUCCESS"
+                        : statusRes.type === TYPE.ERROR
+                        ? "ERROR"
+                        : null
+                    }
                     colorSuccess={COLOR_SUCCESS}
                     colorError={COLOR_ERROR}
                   />
