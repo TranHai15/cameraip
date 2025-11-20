@@ -17,8 +17,7 @@ export const VideoStreamWrapper = styled.div`
     img {
       border-radius: 50%;
       object-fit: cover;
-      box-shadow: 0 0 20px 8px rgba(206, 150, 255, 0.6);
-      border: 4px solid #fff;
+      border: 2px solid #ddd;
     }
 
     .status-overlay {
@@ -26,22 +25,23 @@ export const VideoStreamWrapper = styled.div`
       bottom: 10px;
       left: 0;
       right: 0;
-      background-color: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.7);
       padding: 8px 12px;
       text-align: center;
       font-size: 12px;
       font-weight: bold;
       border-radius: 4px;
       z-index: 10;
+      color: #fff;
     }
   }
 
   p {
     font-size: 0.8rem;
     font-weight: 500;
-    background: linear-gradient(90deg, #eedcff 0%, #fde6f8 100%);
-    color: #a14be8;
-    border-radius: 20px;
+    background: #f5f5f5;
+    color: #666;
+    border-radius: 12px;
     padding: 6px 12px;
   }
 `;

@@ -12,6 +12,7 @@ const shortenNumberString = (str) => {
 const UserInfo = ({ hoVaTen, soCMND, checkinAt, statusMessage }) => {
   return (
     <UserInfoWrapper>
+      {statusMessage}
       <div className="greeting-name">{hoVaTen || ""}</div>
       <div className="greeting-cccd">
         <CreditCardOutlined /> Thẻ căn cước:{" "}

@@ -24,4 +24,3 @@ const StatusMessage = ({
 };
 
 export default StatusMessage;
-

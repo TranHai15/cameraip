@@ -797,7 +797,7 @@ export default function CheckinOut() {
             <div className="greeting-body">
               <div className="empty"></div>
 
-              <div className="face-wrapper">
+              <div className="face-wrapper ">
                 {/* Module 1: Ảnh căn cước - Chỉ hiển thị trong 2s đầu sau khi quét thẻ */}
                 {shouldShowCardImage && (
                   <CardImage
@@ -824,18 +824,6 @@ export default function CheckinOut() {
                     isError={isError}
                   />
                 ) : null}
-                <StatusMessage
-                  message={statusRes.message}
-                  type={
-                    statusRes.type === TYPE.SUCCESS
-                      ? "SUCCESS"
-                      : statusRes.type === TYPE.ERROR
-                      ? "ERROR"
-                      : null
-                  }
-                  colorSuccess={COLOR_SUCCESS}
-                  colorError={COLOR_ERROR}
-                />
               </div>
 
               {/* Module 5: Thông tin user + Module 6: Status message */}
@@ -843,6 +831,20 @@ export default function CheckinOut() {
                 hoVaTen={currentCheckin.HoVaTen}
                 soCMND={currentCheckin.SoCMND}
                 checkinAt={currentCheckin.checkinAt}
+                statusMessage={
+                  <StatusMessage
+                    message={statusRes.message}
+                    type={
+                      statusRes.type === TYPE.SUCCESS
+                        ? "SUCCESS"
+                        : statusRes.type === TYPE.ERROR
+                        ? "ERROR"
+                        : null
+                    }
+                    colorSuccess={COLOR_SUCCESS}
+                    colorError={COLOR_ERROR}
+                  />
+                }
               />
             </div>
           </div>

@@ -18,8 +18,8 @@ export default {
   // ============================================
   // 2. SOCKET CONFIGURATION
   // ============================================
-  socketPort: "8000",        // Port WebSocket quét thẻ CCCD
-  socketAPIPort: "8010",     // Port API so sánh khuôn mặt
+  socketPort: "8000", // Port WebSocket quét thẻ CCCD
+  socketAPIPort: "8010", // Port API so sánh khuôn mặt
 
   // ============================================
   // 3. FACE-SERVER CONFIGURATION
@@ -30,44 +30,44 @@ export default {
   // ============================================
   // 4. FACE COMPARISON THRESHOLD
   // ============================================
-  scoreCompare: 60,  // Ngưỡng điểm khớp khuôn mặt (0-100)
+  scoreCompare: 60, // Ngưỡng điểm khớp khuôn mặt (0-100)
 
   // ============================================
   // 5. UI CONFIGURATION
   // ============================================
-  avatarSize: 240,           // Kích thước avatar (px)
-  cameraWidth: 240,          // Chiều rộng camera preview (px)
-  cameraHeight: 240,         // Chiều cao camera preview (px)
+  avatarSize: 340, // Kích thước avatar (px)
+  cameraWidth: 340, // Chiều rộng camera preview (px)
+  cameraHeight: 340, // Chiều cao camera preview (px)
 
   // ============================================
   // 6. TIMEOUT & DELAY CONFIGURATION
   // ============================================
-  successMessageDelay: 3000,      // Thời gian hiển thị thông báo thành công (ms)
-  retryCaptureDelay: 3000,         // Thời gian chờ trước khi chụp lại (ms)
-  compareFaceDelay: 2000,          // Thời gian delay sau khi so sánh thất bại (ms)
-  socketReconnectDelay: 1000,      // Thời gian delay reconnect socket (ms)
-  socketReconnectAttempts: 5,      // Số lần thử reconnect
+  successMessageDelay: 3000, // Thời gian hiển thị thông báo thành công (ms)
+  retryCaptureDelay: 3000, // Thời gian chờ trước khi chụp lại (ms)
+  compareFaceDelay: 2000, // Thời gian delay sau khi so sánh thất bại (ms)
+  socketReconnectDelay: 1000, // Thời gian delay reconnect socket (ms)
+  socketReconnectAttempts: 5, // Số lần thử reconnect
 
   // ============================================
   // 7. PAGINATION CONFIGURATION
   // ============================================
-  defaultPageSize: 10,       // Số item mặc định mỗi trang
-  defaultPageNumber: 1,      // Trang mặc định
+  defaultPageSize: 10, // Số item mặc định mỗi trang
+  defaultPageNumber: 1, // Trang mặc định
 
   // ============================================
   // 8. API TYPE CONFIGURATION
   // ============================================
-  checkinListType: 2,        // Type cho API GetList (Type=2)
+  checkinListType: 2, // Type cho API GetList (Type=2)
 
   // ============================================
   // 9. MESSAGE CONFIGURATION
   // ============================================
   defaultMessages: {
-    waitingCard: "Quý khách vui lòng quét thẻ căn cước để thực hiện checkin",
-    waitingFace: "Vui lòng đưa mặt vào khung để chụp ảnh",
-    cardError: "Xảy ra lỗi trong quá trình đọc thông tin thẻ căn cước, vui lòng thử lại!",
-    checkinSuccess: "Checkin thành công!",
-    faceNotMatch: "Khuôn mặt không khớp. Vui lòng thử lại.",
+    waitingCard: "Vui lòng quét thẻ căn cước để đăng ký",
+    waitingFace: "",
+    cardError: "Vui lòng thử lại!",
+    checkinSuccess: "Đăng ký thành công!",
+    faceNotMatch: "Vui lòng thử lại.",
     waitingFaceServer: "Chờ quét thẻ...",
   },
 };

@@ -10,18 +10,17 @@ const Statistics = ({ checkIn = 0, checkOut = 0 }) => {
           <UserAddOutlined className="stat-label__icon" /> Tổng số đã checkin
         </span>
         <p className="stat-count">{checkIn}</p>
-        <UserAddOutlined className="blur-icon" />
+        {/* <UserAddOutlined className="blur-icon" /> */}
       </div>
       <div className="stat-card stat-card-checkout">
         <span className="stat-label">
           <UserDeleteOutlined className="stat-label__icon" /> Đã checkout
         </span>
         <p className="stat-count">{checkOut}</p>
-        <UserDeleteOutlined className="blur-icon" />
+        {/* <UserDeleteOutlined className="blur-icon" /> */}
       </div>
     </StatisticsWrapper>
   );
 };
 
 export default Statistics;
-
