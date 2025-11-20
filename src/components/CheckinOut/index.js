@@ -94,7 +94,9 @@ export default function CheckinOut() {
           console.log("✅ [INIT] Điều kiện hợp lệ, gọi handleCompareFace");
           handleCompareFace(base64Image, currentRefCheckin.current);
         } else {
-          console.log("⚠️ [INIT] Bỏ qua ảnh vì đang xử lý API hoặc chưa có thông tin thẻ");
+          console.log(
+            "⚠️ [INIT] Bỏ qua ảnh vì đang xử lý API hoặc chưa có thông tin thẻ"
+          );
         }
       },
       // onError: Xử lý lỗi kết nối
@@ -108,7 +110,9 @@ export default function CheckinOut() {
       (data) => {
         console.log("📊 [INIT] Nhận face status:", data);
         if (data && data.status && data.message) {
-          console.log(`🔄 [INIT] Cập nhật face status: ${data.status} - ${data.message}`);
+          console.log(
+            `🔄 [INIT] Cập nhật face status: ${data.status} - ${data.message}`
+          );
           setFaceStatus({
             status: data.status,
             message: data.message,
@@ -156,7 +160,7 @@ export default function CheckinOut() {
           const data = res.data.Data;
           console.log("✅ [STATS] Thống kê thành công:", {
             tongCheckIn: data.Tong,
-            daVe: data.DaVe
+            daVe: data.DaVe,
           });
           setTotalCheckinOut({
             checkIn: data.Tong,
@@ -185,14 +189,20 @@ export default function CheckinOut() {
   };
 
   const handleConnectSocketScan = () => {
-    console.log(`🔌 [SOCKET_CARD] Bắt đầu kết nối WebSocket đến port ${settings.socketPort}...`);
+    console.log(
+      `🔌 [SOCKET_CARD] Bắt đầu kết nối WebSocket đến port ${settings.socketPort}...`
+    );
     const socket = new WebSocket(`ws://localhost:${settings.socketPort}`);
     socketRef.current = socket;
     console.log("🔌 [SOCKET_CARD] WebSocket instance được tạo");
 
     socket.onopen = () => {
-      console.log(`✅ [SOCKET_CARD] Kết nối WebSocket thành công đến port ${settings.socketPort}`);
-      console.log("📡 [SOCKET_CARD] Sẵn sàng nhận dữ liệu từ thiết bị quét thẻ CCCD");
+      console.log(
+        `✅ [SOCKET_CARD] Kết nối WebSocket thành công đến port ${settings.socketPort}`
+      );
+      console.log(
+        "📡 [SOCKET_CARD] Sẵn sàng nhận dữ liệu từ thiết bị quét thẻ CCCD"
+      );
     };
 
     socketRef.current.onmessage = (event) => {
@@ -206,7 +216,9 @@ export default function CheckinOut() {
       }
 
       if (data.NewState === "EMPTY") {
-        console.log("🗑️ [SOCKET_CARD] Event EMPTY - Thẻ đã được lấy ra khỏi thiết bị");
+        console.log(
+          "🗑️ [SOCKET_CARD] Event EMPTY - Thẻ đã được lấy ra khỏi thiết bị"
+        );
         console.log("🔄 [SOCKET_CARD] Reset toàn bộ trạng thái...");
         setCurrentCheckin({});
         currentRefCheckin.current = null;
@@ -231,12 +243,16 @@ export default function CheckinOut() {
           ngaySinh: data.PersonalInfo.dateOfBirth,
           gioiTinh: data.PersonalInfo.gender,
           hasChipFace: !!data.ChipFace,
-          hasResidencePlace: !!data.PersonalInfo.residencePlace
+          hasResidencePlace: !!data.PersonalInfo.residencePlace,
         });
 
         setLoadingDataScan(false);
         const checkinAt = Date.now();
-        console.log(`🕐 [SOCKET_CARD] Timestamp checkin: ${checkinAt} (${new Date(checkinAt).toLocaleString()})`);
+        console.log(
+          `🕐 [SOCKET_CARD] Timestamp checkin: ${checkinAt} (${new Date(
+            checkinAt
+          ).toLocaleString()})`
+        );
 
         const dataReaded = {
           HoVaTen: data.PersonalInfo.personName,
@@ -255,7 +271,7 @@ export default function CheckinOut() {
         console.log("📝 [SOCKET_CARD] Dữ liệu checkin đã chuẩn bị:", {
           hoVaTen: dataReaded.HoVaTen,
           soCMND: dataReaded.SoCMND,
-          lyDoGap: dataReaded.LyDoGap
+          lyDoGap: dataReaded.LyDoGap,
         });
 
         setStatusRes({
@@ -279,7 +295,9 @@ export default function CheckinOut() {
         // Gửi lệnh bắt đầu chụp ảnh từ face-server ngay lập tức (bỏ delay)
         console.log("📷 [SOCKET_CARD] Khởi động face-server capture...");
         faceServerService.startCapture();
-        console.log("✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt");
+        console.log(
+          "✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt"
+        );
       }
 
       if (data.Status === "FAILURE") {
@@ -334,7 +352,7 @@ export default function CheckinOut() {
     console.log("🔍 [LIST] Filter:", {
       pageSize: filterData.PageSize,
       pageNumber: filterData.PageNumber,
-      type: settings.checkinListType
+      type: settings.checkinListType,
     });
 
     setLoadingCheckIn(true);
@@ -355,14 +373,16 @@ export default function CheckinOut() {
             console.log("📄 [LIST] Load trang đầu tiên, thay thế danh sách");
             newListCheckin = newItems;
           } else {
-            console.log(`📄 [LIST] Load trang ${filterData.PageNumber}, thêm vào danh sách hiện tại`);
+            console.log(
+              `📄 [LIST] Load trang ${filterData.PageNumber}, thêm vào danh sách hiện tại`
+            );
             newItems.forEach((item) => newListCheckin.push(item));
           }
 
           console.log("✅ [LIST] Cập nhật danh sách thành công:", {
             totalItems: newListCheckin.length,
             totalRow: TotalRow,
-            newItemsCount: newItems.length
+            newItemsCount: newItems.length,
           });
 
           setListCheckin(newListCheckin);
@@ -387,7 +407,7 @@ export default function CheckinOut() {
       soCMND: currentCheckin.SoCMND,
       lyDoGap: currentCheckin.LyDoGap,
       score: score,
-      checkinAt: new Date(currentCheckin.checkinAt).toLocaleString()
+      checkinAt: new Date(currentCheckin.checkinAt).toLocaleString(),
     });
 
     const param = { ...currentCheckin };
@@ -405,7 +425,7 @@ export default function CheckinOut() {
 
     console.log("📅 [CHECKIN_API] Ngày đã chuyển đổi:", {
       ngaySinh: param.NgaySinh,
-      ngayCapCMND: param.NgayCapCMND
+      ngayCapCMND: param.NgayCapCMND,
     });
 
     console.log(`🔍 [CHECKIN_API] LyDoGap: ${param.LyDoGap}`);
@@ -425,13 +445,16 @@ export default function CheckinOut() {
           message.warning("Chưa chọn đối tượng gặp");
           return;
         } else {
-          console.log("✅ [CHECKIN_API] Có thông tin đối tượng gặp:", param.GapCanBo);
+          console.log(
+            "✅ [CHECKIN_API] Có thông tin đối tượng gặp:",
+            param.GapCanBo
+          );
           const arr = param.GapCanBo.split("_");
           param.GapCanBo = arr[0];
           param.DonViCaNhan = arr[1];
           console.log("📝 [CHECKIN_API] Đã parse GapCanBo:", {
             gapCanBo: param.GapCanBo,
-            donViCaNhan: param.DonViCaNhan
+            donViCaNhan: param.DonViCaNhan,
           });
         }
       } else {
@@ -451,18 +474,25 @@ export default function CheckinOut() {
       ngaySinh: param.NgaySinh,
       ngayCapCMND: param.NgayCapCMND,
       hasAnhChanDung: !!param.AnhChanDungBase64,
-      score: score
+      score: score,
     });
 
     checkinApi
       .Checkinv4(param)
       .then((response) => {
         console.log("📥 [CHECKIN_API] Response từ API Checkinv4:", response);
-        console.log("📊 [CHECKIN_API] Status:", response?.data?.Status, "Message:", response?.data?.Message);
+        console.log(
+          "📊 [CHECKIN_API] Status:",
+          response?.data?.Status,
+          "Message:",
+          response?.data?.Message
+        );
 
         if (response && response.data && response.data.Status > 0) {
           console.log("✅ [CHECKIN_API] CHECK-IN THÀNH CÔNG!");
-          console.log("🎉 [CHECKIN_API] Người dùng đã được check-in thành công");
+          console.log(
+            "🎉 [CHECKIN_API] Người dùng đã được check-in thành công"
+          );
 
           setLoadingDataScan(false);
           setStatusRes({
@@ -482,9 +512,13 @@ export default function CheckinOut() {
           });
 
           // Dọn dẹp: Reset toàn bộ state sau khi check-in thành công
-          console.log(`⏳ [CHECKIN_API] Chờ ${settings.successMessageDelay}ms trước khi reset...`);
+          console.log(
+            `⏳ [CHECKIN_API] Chờ ${settings.successMessageDelay}ms trước khi reset...`
+          );
           setTimeout(() => {
-            console.log("🧹 [CHECKIN_API] Reset toàn bộ trạng thái sau thành công...");
+            console.log(
+              "🧹 [CHECKIN_API] Reset toàn bộ trạng thái sau thành công..."
+            );
             setCurrentCheckin({});
             currentRefCheckin.current = null;
             setStatusRes({
@@ -502,11 +536,16 @@ export default function CheckinOut() {
             });
             // Dừng capture nếu đang chạy
             faceServerService.stopCapture();
-            console.log("✅ [CHECKIN_API] Đã reset xong, sẵn sàng cho người dùng tiếp theo");
+            console.log(
+              "✅ [CHECKIN_API] Đã reset xong, sẵn sàng cho người dùng tiếp theo"
+            );
           }, settings.successMessageDelay); // Sau khi hiển thị thông báo thành công
         } else {
           console.log("❌ [CHECKIN_API] CHECK-IN THẤT BẠI!");
-          console.log("📝 [CHECKIN_API] Lỗi:", response?.data?.Message || "Lỗi không xác định");
+          console.log(
+            "📝 [CHECKIN_API] Lỗi:",
+            response?.data?.Message || "Lỗi không xác định"
+          );
 
           refCallingApi.current = false;
           setIsCallingApi(false);
@@ -530,7 +569,9 @@ export default function CheckinOut() {
             });
             // Dừng capture và chờ quét thẻ mới
             faceServerService.stopCapture();
-            console.log("✅ [CHECKIN_API] Đã reset xong, chờ người dùng thử lại");
+            console.log(
+              "✅ [CHECKIN_API] Đã reset xong, chờ người dùng thử lại"
+            );
           }, 2000); // Hiển thị lỗi trong 2 giây rồi reset
         }
       })
@@ -575,7 +616,7 @@ export default function CheckinOut() {
       hoVaTen: currentCheckin.HoVaTen,
       soCMND: currentCheckin.SoCMND,
       hasAnhCCCD: !!currentCheckin.imageChanDung,
-      hasAnhChanDung: !!img
+      hasAnhChanDung: !!img,
     });
 
     setLoadingDataScan(true);
@@ -583,14 +624,16 @@ export default function CheckinOut() {
     refCallingApi.current = true;
     setIsCallingApi(true);
 
-    console.log(`🌐 [FACE_COMPARE] Gọi API CompareFace đến port ${settings.socketAPIPort}...`);
+    console.log(
+      `🌐 [FACE_COMPARE] Gọi API CompareFace đến port ${settings.socketAPIPort}...`
+    );
     const compareParams = {
       AnhCCCD: currentCheckin.imageChanDung,
       AnhChanDung: img,
     };
     console.log("📤 [FACE_COMPARE] Parameters:", {
       anhCCCDLength: compareParams.AnhCCCD?.length || 0,
-      anhChanDungLength: compareParams.AnhChanDung?.length || 0
+      anhChanDungLength: compareParams.AnhChanDung?.length || 0,
     });
 
     checkinApi
@@ -606,9 +649,17 @@ export default function CheckinOut() {
 
         const score = res?.data?.Score;
         const scoreNum = Number(score); // Convert to number just in case
-        console.log(`🎯 [FACE_COMPARE] Điểm số so khớp: ${score} (type: ${typeof score})`);
-        console.log(`🔢 [FACE_COMPARE] Score as number: ${scoreNum} (type: ${typeof scoreNum})`);
-        console.log(`📊 [FACE_COMPARE] So sánh: ${scoreNum} > ${scoreCompareFace} = ${scoreNum > scoreCompareFace}`);
+        console.log(
+          `🎯 [FACE_COMPARE] Điểm số so khớp: ${score} (type: ${typeof score})`
+        );
+        console.log(
+          `🔢 [FACE_COMPARE] Score as number: ${scoreNum} (type: ${typeof scoreNum})`
+        );
+        console.log(
+          `📊 [FACE_COMPARE] So sánh: ${scoreNum} > ${scoreCompareFace} = ${
+            scoreNum > scoreCompareFace
+          }`
+        );
 
         // Use scoreNum for comparison instead of score
         if (res && res.data && scoreNum > scoreCompareFace) {
@@ -624,8 +675,14 @@ export default function CheckinOut() {
           CheckIn(currentCheckin, scoreNum);
         } else {
           console.log("❌ [FACE_COMPARE] So khớp khuôn mặt THẤT BẠI");
-          console.log(`📊 [FACE_COMPARE] Điểm số quá thấp: ${scoreNum} <= ${scoreCompareFace}`);
-          console.log(`⚠️ [FACE_COMPARE] Debug: scoreNum=${scoreNum}, scoreCompareFace=${scoreCompareFace}, comparison=${scoreNum > scoreCompareFace}`);
+          console.log(
+            `📊 [FACE_COMPARE] Điểm số quá thấp: ${scoreNum} <= ${scoreCompareFace}`
+          );
+          console.log(
+            `⚠️ [FACE_COMPARE] Debug: scoreNum=${scoreNum}, scoreCompareFace=${scoreCompareFace}, comparison=${
+              scoreNum > scoreCompareFace
+            }`
+          );
           handleRetryDelay();
           setTimeout(() => {
             console.log("🔄 [FACE_COMPARE] Reset ảnh và trạng thái...");
@@ -642,13 +699,17 @@ export default function CheckinOut() {
             });
             setLoadingCheckIn(false);
             // Cho phép chụp lại sau khi thất bại
-            console.log(`⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`);
+            console.log(
+              `⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`
+            );
             setTimeout(() => {
               if (
                 currentRefCheckin.current &&
                 currentRefCheckin.current.SoCMND
               ) {
-                console.log("📷 [FACE_COMPARE] Khởi động capture lại sau thất bại");
+                console.log(
+                  "📷 [FACE_COMPARE] Khởi động capture lại sau thất bại"
+                );
                 faceServerService.startCapture();
               }
             }, settings.retryCaptureDelay);
@@ -663,7 +724,9 @@ export default function CheckinOut() {
         setIsCallingApi(false);
         setLoadingDataScan(false);
         // Cho phép chụp lại sau khi lỗi
-        console.log(`⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`);
+        console.log(
+          `⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`
+        );
         setTimeout(() => {
           if (currentRefCheckin.current && currentRefCheckin.current.SoCMND) {
             console.log("📷 [FACE_COMPARE] Khởi động capture lại sau lỗi");
@@ -761,6 +824,18 @@ export default function CheckinOut() {
                     isError={isError}
                   />
                 ) : null}
+                <StatusMessage
+                  message={statusRes.message}
+                  type={
+                    statusRes.type === TYPE.SUCCESS
+                      ? "SUCCESS"
+                      : statusRes.type === TYPE.ERROR
+                      ? "ERROR"
+                      : null
+                  }
+                  colorSuccess={COLOR_SUCCESS}
+                  colorError={COLOR_ERROR}
+                />
               </div>
 
               {/* Module 5: Thông tin user + Module 6: Status message */}
@@ -768,20 +843,6 @@ export default function CheckinOut() {
                 hoVaTen={currentCheckin.HoVaTen}
                 soCMND={currentCheckin.SoCMND}
                 checkinAt={currentCheckin.checkinAt}
-                statusMessage={
-                  <StatusMessage
-                    message={statusRes.message}
-                    type={
-                      statusRes.type === TYPE.SUCCESS
-                        ? "SUCCESS"
-                        : statusRes.type === TYPE.ERROR
-                        ? "ERROR"
-                        : null
-                    }
-                    colorSuccess={COLOR_SUCCESS}
-                    colorError={COLOR_ERROR}
-                  />
-                }
               />
             </div>
           </div>

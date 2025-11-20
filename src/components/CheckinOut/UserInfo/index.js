@@ -23,10 +23,8 @@ const UserInfo = ({ hoVaTen, soCMND, checkinAt, statusMessage }) => {
           {checkinAt ? moment(checkinAt).format("HH:mm") : "........."}
         </span>
       </div>
-      {statusMessage}
     </UserInfoWrapper>
   );
 };
 
 export default UserInfo;
-
