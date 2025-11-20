@@ -54,6 +54,35 @@ const scaleIn = keyframes`
   }
 `;
 
+const slideInNew = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) scale(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+`;
+
+const pulseNew = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 200, 83, 0);
+  }
+`;
+
+const bounce = keyframes`
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+`;
+
 export const CheckinListWrapper = styled.div`
   flex: 1.2;
   display: flex;
@@ -103,7 +132,12 @@ export const CheckinListWrapper = styled.div`
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
       animation: ${shimmer} 2s infinite;
     }
   }
@@ -155,7 +189,7 @@ export const CheckinListWrapper = styled.div`
     animation: ${fadeIn} 0.5s ease-out;
     border: 1px solid rgba(0, 0, 0, 0.05);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 
     &::before {
       content: "";
@@ -177,6 +211,30 @@ export const CheckinListWrapper = styled.div`
       &::before {
         transform: scaleY(1);
       }
+    }
+
+    /* Card mới - chỉ có animation khi thêm vào */
+    &.customer-card--new {
+      animation: ${slideInNew} 2s ease-out;
+    }
+
+    /* Badge "Mới" */
+    .new-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: linear-gradient(135deg, #00c853 0%, #00e676 100%);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 200, 83, 0.5);
+      z-index: 10;
+      animation: ${bounce} 1s ease-in-out infinite;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
     }
   }
 
@@ -276,4 +334,3 @@ export const CheckinListWrapper = styled.div`
     }
   }
 `;
-

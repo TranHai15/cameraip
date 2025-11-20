@@ -50,7 +50,6 @@ export const CapturedImageWrapper = styled.div`
     &.success {
       .captured-avatar {
         border: 6px solid #00c853 !important;
-        box-shadow: 0 0 30px 15px rgba(0, 200, 83, 0.8) !important;
         animation: ${successPulse} 1.5s ease infinite;
         transform: scale(1.02);
       }
@@ -101,7 +100,6 @@ export const CapturedImageWrapper = styled.div`
         font-size: 14px;
         font-weight: 600;
         white-space: nowrap;
-        box-shadow: 0 4px 12px rgba(0, 200, 83, 0.4);
         z-index: 10;
       }
     }
@@ -109,7 +107,6 @@ export const CapturedImageWrapper = styled.div`
     &.error {
       .captured-avatar {
         border: 6px solid #ff5722 !important;
-        box-shadow: 0 0 30px 15px rgba(255, 87, 34, 0.8) !important;
         animation: ${errorPulse} 1.5s ease infinite;
       }
 
@@ -142,7 +139,6 @@ export const CapturedImageWrapper = styled.div`
         font-size: 28px;
         font-weight: bold;
         border: 4px solid white;
-        box-shadow: 0 4px 12px rgba(255, 87, 34, 0.6);
         z-index: 10;
         animation: ${errorPulse} 1.5s ease infinite;
       }
@@ -174,4 +170,3 @@ export const CapturedImageWrapper = styled.div`
     padding: 6px 12px;
   }
 `;
-
