@@ -1,19 +1,20 @@
 import React, { useEffect, useState, useRef } from "react";
 import { MainWrapper } from "./style";
-import { Avatar, Spin, message } from "antd";
-import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  CreditCardOutlined,
-  UserAddOutlined,
-  UserDeleteOutlined,
-} from "@ant-design/icons";
+import { Spin, message } from "antd";
 import moment from "moment";
-import defaultUser from "../../assets/images/user.jpg";
 import settings from "../../config/settings";
 import checkinApi from "../../services/checkinApi";
 import faceServerService from "../../services/faceServerService";
+
+// Import các component con
+import CardImage from "./CardImage";
+import VideoStream from "./VideoStream";
+import CapturedImage from "./CapturedImage";
+import ScoreIndicator from "./ScoreIndicator";
+import UserInfo from "./UserInfo";
+import StatusMessage from "./StatusMessage";
+import Statistics from "./Statistics";
+import CheckinList from "./CheckinList";
 
 const TYPE = {
   ERROR: 1,
@@ -52,6 +53,7 @@ export default function CheckinOut() {
     status: "idle", // idle, waiting, adjusting, ready, capturing, error
     message: settings.defaultMessages.waitingFaceServer,
   });
+  const [showCardImage, setShowCardImage] = useState(false); // Hiển thị ảnh thẻ trong 2s sau khi quét
 
   const listCheckinRef = useRef(listCheckin);
   const currentRefCheckin = useRef(null);
@@ -78,11 +80,6 @@ export default function CheckinOut() {
   }, [filterData]);
 
   useEffect(() => {
-    const container = document.getElementsByClassName("customer-list");
-    if (container[0]) {
-      container[0].addEventListener("scroll", ScrollContainer);
-    }
-
     GetListCheckin(filterData);
     handleConnectSocketScan();
 
@@ -190,6 +187,7 @@ export default function CheckinOut() {
           Score: null,
         });
         setStateScan(null);
+        setShowCardImage(false); // Ẩn ảnh thẻ khi thẻ đã lấy ra
         // Dừng chụp ảnh khi thẻ đã lấy ra
         faceServerService.stopCapture();
       }
@@ -219,6 +217,12 @@ export default function CheckinOut() {
         console.log("set success");
         setCurrentCheckin(dataReaded);
         currentRefCheckin.current = dataReaded;
+
+        // Hiển thị ảnh thẻ trong 2 giây, sau đó ẩn đi
+        setShowCardImage(true);
+        setTimeout(() => {
+          setShowCardImage(false);
+        }, 2000); // 2 giây
 
         // Gửi lệnh bắt đầu chụp ảnh từ face-server ngay lập tức (bỏ delay)
         faceServerService.startCapture();
@@ -361,6 +365,7 @@ export default function CheckinOut() {
               Score: null,
             });
             setStateScan(null);
+            setShowCardImage(false); // Ẩn ảnh thẻ
             setFaceStatus({
               status: "idle",
               message: settings.defaultMessages.waitingFaceServer,
@@ -467,264 +472,114 @@ export default function CheckinOut() {
       });
   };
 
-  // Video stream từ face-server - Hiển thị ngay khi mount
+  // Video stream từ face-server
   const videoFeedUrl = faceServerService.getVideoFeedUrl();
 
-  // Hàm lấy màu theo status
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "waiting":
-        return "#ff4d4f"; // Đỏ
-      case "adjusting":
-        return "#faad14"; // Vàng
-      case "ready":
-        return "#52c41a"; // Xanh
-      case "capturing":
-        return "#1890ff"; // Xanh dương
-      case "error":
-        return "#ff4d4f"; // Đỏ
-      default:
-        return "#8c8c8c"; // Xám
-    }
-  };
-
-  const cameraContentScan = (
-    <div
-      className={"camera-container"}
-      style={{
-        width: settings.cameraWidth,
-        height: settings.cameraHeight,
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <img
-        src={videoFeedUrl}
-        alt="Video feed"
-        style={{
-          width: `${settings.cameraWidth}px`,
-          height: `${settings.cameraHeight}px`,
-          objectFit: "cover",
-        }}
-        onError={(e) => {
-          console.error("Error loading video feed:", e);
-          e.target.src = ""; // Clear src on error
-        }}
-      />
-      {/* Overlay message từ BE */}
-      {faceStatus.status !== "idle" && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 10,
-            left: 0,
-            right: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            color: getStatusColor(faceStatus.status),
-            padding: "8px 12px",
-            textAlign: "center",
-            fontSize: "12px",
-            fontWeight: "bold",
-            borderRadius: "4px",
-            zIndex: 10,
-          }}
-        >
-          {faceStatus.message}
-        </div>
-      )}
-    </div>
-  );
-
-  const shortenNumberString = (str) => {
-    if (!str) return "";
-    if (str.length <= 6) return str;
-    return str.slice(0, 3) + "........." + str.slice(-3);
-  };
+  // Logic hiển thị:
+  // 1. Mặc định: Không hiển thị gì (chưa có dữ liệu thẻ)
+  // 2. Có dữ liệu thẻ, showCardImage = true (2s đầu): Chỉ CardImage (chưa hiển thị VideoStream)
+  // 3. Có dữ liệu thẻ, showCardImage = false (sau 2s): Chỉ VideoStream (ẩn CardImage)
+  // 4. Có ảnh chụp: Chỉ CapturedImage (ẩn CardImage và VideoStream)
+  // 5. Có ảnh chụp và thành công: CapturedImage có CSS success
+  // 6. Có ảnh chụp nhưng thất bại: Quay lại chỉ VideoStream (FaceImg đã được reset)
+  
+  const hasCardData = !!currentCheckin.imageChanDung;
+  const hasCapturedImage = !!currentCheckin.FaceImg;
+  const isSuccess = statusRes.type === TYPE.SUCCESS && hasCapturedImage;
+  // Hiển thị CardImage chỉ trong 2s đầu sau khi quét thẻ, và khi có ảnh chụp thì không hiển thị
+  const shouldShowCardImage = showCardImage && !hasCapturedImage;
+  // Chỉ hiển thị VideoStream sau khi ẩn CardImage (sau 2s) và chưa có ảnh chụp
+  const shouldShowVideo = hasCardData && !hasCapturedImage && !showCardImage;
+  const shouldShowScore = hasCapturedImage;
 
   const COLOR_SUCCESS = "#fff";
   const COLOR_ERROR = "#fff";
-  const checkResultScore =
-    statusRes.Score >= 0 && typeof statusRes.Score === "number";
 
   return (
     <div>
       <MainWrapper>
         <div className="left-panel">
           <div className="left-panel__top">
-            {loadingDataScan ? (
+            {loadingDataScan && (
               <div className="spin-container">
                 <Spin size="large" />
               </div>
-            ) : null}
+            )}
 
             <div className="greeting-title" style={{ color: COLOR_SUCCESS }}>
               Xin chào quý khách
             </div>
+            
             <div className="greeting-body">
-              <>
-                <div className="empty"></div>
-                <div className="face-wrapper">
-                  <div className="card">
-                    <Avatar
-                      size={settings.avatarSize}
-                      src={currentCheckin.imageChanDung}
-                      className="greeting-avatar"
-                    />
-                    <p>Ảnh thẻ CCCD</p>
-                  </div>
-
-                  <div
-                    className={`score ${
-                      statusRes.type === TYPE.ERROR
-                        ? "score-fail"
-                        : statusRes.type === TYPE.SUCCESS
-                        ? "score-success"
-                        : ""
-                    }`}
-                  >
-                    <div className={checkResultScore ? "score-circle" : ""}>
-                      {checkResultScore ? (
-                        statusRes.Score >= scoreCompareFace ? (
-                          <CheckCircleOutlined />
-                        ) : (
-                          <CloseCircleOutlined />
-                        )
-                      ) : null}
-                    </div>
-                    <p
-                      style={{
-                        color:
-                          statusRes.Score >= scoreCompareFace
-                            ? "green"
-                            : "black",
-                      }}
-                    >
-                      {checkResultScore
-                        ? statusRes.Score >= scoreCompareFace
-                          ? "Khớp"
-                          : "Không khớp"
-                        : ""}
-                    </p>
-                  </div>
-                  <div className="card-liveview">
-                    {!currentCheckin.FaceImg ? (
-                      // Hiển thị video stream ngay cả khi chưa có thẻ
-                      <div className={`screen-wrapper`}>
-                        {cameraContentScan}
-                      </div>
-                    ) : (
-                      <Avatar
-                        size={settings.avatarSize}
-                        src={currentCheckin.FaceImg}
-                        className="greeting-avatar"
-                      />
-                    )}
-                    <p>Ảnh chụp</p>
-                  </div>
-                </div>
-
-                <div className="face-info">
-                  <div className="greeting-name">{currentCheckin.HoVaTen}</div>
-                  <div className="greeting-cccd">
-                    <CreditCardOutlined /> Thẻ căn cước:{" "}
-                    {currentCheckin.SoCMND
-                      ? shortenNumberString(currentCheckin.SoCMND)
-                      : "........."}
-                  </div>
-                  <div className="greeting-checkin">
-                    <ClockCircleOutlined /> Giờ checkin:{" "}
-                    <span className="checkin-time">
-                      {currentCheckin.checkinAt
-                        ? moment(currentCheckin.checkinAt).format("HH:mm")
-                        : "........."}
-                    </span>
-                  </div>
-                  {statusRes.message ? (
-                    <h1
-                      className={`${
-                        statusRes.type === TYPE.ERROR ? "error" : ""
-                      } status-checkin`}
-                      style={{
-                        color:
-                          statusRes.type === TYPE.ERROR
-                            ? COLOR_ERROR
-                            : COLOR_SUCCESS,
-                      }}
-                    >
-                      {statusRes.type === TYPE.ERROR ? (
-                        <CloseCircleOutlined />
-                      ) : (
-                        <CheckCircleOutlined />
-                      )}
-                      {statusRes.message}
-                    </h1>
-                  ) : null}
-                </div>
-              </>
-            </div>
-          </div>
-
-          <div className="stats-row">
-            <div className="stat-card">
-              <span className="stat-label">
-                <UserAddOutlined className="stat-label__icon" /> Tổng số đã
-                checkin
-              </span>
-              <p className="stat-count">{totalCheckInOut.checkIn}</p>
-              <UserAddOutlined className="blur-icon" />
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">
-                <UserDeleteOutlined className="stat-label__icon" /> Đã checkout
-              </span>
-              <p className="stat-count">{totalCheckInOut.checkOut}</p>
-              <UserDeleteOutlined className="blur-icon" />
-            </div>
-          </div>
-        </div>
-        <div className="right-panel">
-          <div className="list-title">Danh sách khách đã checkin</div>
-          <div
-            className={`customer-list ${
-              listCheckin.length === 0 ? "customer-list__empty" : ""
-            }`}
-          >
-            {listCheckin.length === 0 ? (
-              <></>
-            ) : (
-              listCheckin.map((item) => (
-                <div className="customer-card" key={item.id}>
-                  <img
-                    src={
-                      item.AnhChanDungBase64 !== ""
-                        ? item.AnhChanDungBase64
-                        : defaultUser
-                    }
-                    alt=""
-                    className="customer-avatar"
+              <div className="empty"></div>
+              
+              <div className="face-wrapper">
+                {/* Module 1: Ảnh căn cước - Chỉ hiển thị trong 2s đầu sau khi quét thẻ */}
+                {shouldShowCardImage && (
+                  <CardImage
+                    imageSrc={currentCheckin.imageChanDung}
+                    size={settings.avatarSize}
                   />
-                  <div className="customer-info">
-                    <div className="info">
-                      <div className="customer-name">{item.HoVaTen}</div>
-                      <div className="customer-cccd">
-                        {shortenNumberString(item.SoCMND)}
-                      </div>
-                      <div className="customer-checkin">
-                        <ClockCircleOutlined />{" "}
-                        {moment(item.GioVao).format("HH:mm ")}
-                      </div>
-                    </div>
-                    <div className="status">
-                      <p className="status-customer__checkin">Đã vào</p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+                )}
+
+                {/* Module 4: Score Indicator - Chỉ hiển thị khi có ảnh chụp */}
+                {shouldShowScore && (
+                  <ScoreIndicator
+                    score={statusRes.Score}
+                    threshold={scoreCompareFace}
+                    type={statusRes.type === TYPE.SUCCESS ? "SUCCESS" : statusRes.type === TYPE.ERROR ? "ERROR" : null}
+                  />
+                )}
+
+                {/* Module 2 & 3: Video hoặc Ảnh chụp */}
+                {shouldShowVideo ? (
+                  // Hiển thị VideoStream khi có dữ liệu thẻ nhưng chưa có ảnh chụp
+                  <VideoStream
+                    videoUrl={videoFeedUrl}
+                    faceStatus={faceStatus}
+                    width={settings.cameraWidth}
+                    height={settings.cameraHeight}
+                  />
+                ) : hasCapturedImage ? (
+                  // Hiển thị CapturedImage khi đã có ảnh chụp
+                  <CapturedImage
+                    imageSrc={currentCheckin.FaceImg}
+                    size={settings.avatarSize}
+                    isSuccess={isSuccess}
+                  />
+                ) : null}
+              </div>
+
+              {/* Module 5: Thông tin user + Module 6: Status message */}
+              <UserInfo
+                hoVaTen={currentCheckin.HoVaTen}
+                soCMND={currentCheckin.SoCMND}
+                checkinAt={currentCheckin.checkinAt}
+                statusMessage={
+                  <StatusMessage
+                    message={statusRes.message}
+                    type={statusRes.type === TYPE.SUCCESS ? "SUCCESS" : statusRes.type === TYPE.ERROR ? "ERROR" : null}
+                    colorSuccess={COLOR_SUCCESS}
+                    colorError={COLOR_ERROR}
+                  />
+                }
+              />
+            </div>
           </div>
+
+          {/* Module 7: Thống kê */}
+          <Statistics
+            checkIn={totalCheckInOut.checkIn}
+            checkOut={totalCheckInOut.checkOut}
+          />
         </div>
+
+        {/* Module 8: Danh sách check-in */}
+        <CheckinList
+          listCheckin={listCheckin}
+          loading={loadingCheckIn}
+          onScroll={ScrollContainer}
+        />
       </MainWrapper>
     </div>
   );
