@@ -22,7 +22,7 @@ const CapturedImage = ({
           <Avatar size={size} src={imageSrc} className="captured-avatar" />
         </div>
       )}
-      <p>Ảnh chụp</p>
+      {/* <p>Ảnh chụp</p> */}
     </CapturedImageWrapper>
   );
 };

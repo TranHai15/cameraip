@@ -1,26 +1,31 @@
 import styled, { keyframes } from "styled-components";
 
-const successPulse = keyframes`
-  0% {
-    box-shadow: 0 0 20px 8px rgba(0, 200, 83, 0.6);
+const successGlow = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 15px 4px rgba(0, 200, 83, 0.4);
   }
   50% {
-    box-shadow: 0 0 30px 12px rgba(0, 200, 83, 0.8);
-  }
-  100% {
-    box-shadow: 0 0 20px 8px rgba(0, 200, 83, 0.6);
+    box-shadow: 0 0 20px 6px rgba(0, 200, 83, 0.6);
   }
 `;
 
-const errorPulse = keyframes`
-  0% {
-    box-shadow: 0 0 20px 8px rgba(255, 87, 34, 0.6);
+const errorGlow = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 15px 4px rgba(255, 87, 34, 0.4);
   }
   50% {
-    box-shadow: 0 0 30px 12px rgba(255, 87, 34, 0.8);
+    box-shadow: 0 0 20px 6px rgba(255, 87, 34, 0.6);
   }
-  100% {
-    box-shadow: 0 0 20px 8px rgba(255, 87, 34, 0.6);
+`;
+
+const scaleIn = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 `;
 
@@ -42,121 +47,66 @@ export const CapturedImageWrapper = styled.div`
     justify-content: center;
 
     .captured-avatar {
-      border: 4px solid #fff;
-      box-shadow: 0 0 20px 8px rgba(206, 150, 255, 0.6);
+      border: 3px solid #fff;
+      box-shadow: 0 0 15px 4px rgba(206, 150, 255, 0.4);
       transition: all 0.3s ease;
     }
 
     &.success {
       .captured-avatar {
-        border: 6px solid #00c853 !important;
-        animation: ${successPulse} 1.5s ease infinite;
-        transform: scale(1.02);
-      }
-
-      &::before {
-        content: "";
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        right: -10px;
-        bottom: -10px;
-        border: 3px solid #00c853;
-        border-radius: 50%;
-        animation: ${successPulse} 1.5s ease infinite;
-        z-index: 1;
+        border: 3px solid #00c853 !important;
+        animation: ${successGlow} 2s ease-in-out infinite;
+        box-shadow: 0 0 15px 4px rgba(0, 200, 83, 0.4);
       }
 
       &::after {
         content: "✓";
         position: absolute;
-        top: -12px;
-        right: -12px;
-        width: 48px;
-        height: 48px;
+        top: -8px;
+        right: -8px;
+        width: 36px;
+        height: 36px;
         background: linear-gradient(135deg, #00c853, #00e676);
         color: white;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: 20px;
         font-weight: bold;
-        border: 4px solid white;
-        box-shadow: 0 4px 12px rgba(0, 200, 83, 0.6);
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.5);
         z-index: 10;
-        animation: ${successPulse} 1.5s ease infinite;
-      }
-
-      .success-label {
-        position: absolute;
-        bottom: -35px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, #00c853, #00e676);
-        color: white;
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
-        white-space: nowrap;
-        z-index: 10;
+        animation: ${scaleIn} 0.5s ease-out;
       }
     }
 
     &.error {
       .captured-avatar {
-        border: 6px solid #ff5722 !important;
-        animation: ${errorPulse} 1.5s ease infinite;
-      }
-
-      &::before {
-        content: "";
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        right: -10px;
-        bottom: -10px;
-        border: 3px solid #ff5722;
-        border-radius: 50%;
-        animation: ${errorPulse} 1.5s ease infinite;
-        z-index: 1;
+        border: 3px solid #ff5722 !important;
+        animation: ${errorGlow} 2s ease-in-out infinite;
+        box-shadow: 0 0 15px 4px rgba(255, 87, 34, 0.4);
       }
 
       &::after {
         content: "✗";
         position: absolute;
-        top: -12px;
-        right: -12px;
-        width: 48px;
-        height: 48px;
+        top: -8px;
+        right: -8px;
+        width: 36px;
+        height: 36px;
         background: linear-gradient(135deg, #ff5722, #ff7043);
         color: white;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: 20px;
         font-weight: bold;
-        border: 4px solid white;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(255, 87, 34, 0.5);
         z-index: 10;
-        animation: ${errorPulse} 1.5s ease infinite;
-      }
-
-      .error-label {
-        position: absolute;
-        bottom: -35px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, #ff5722, #ff7043);
-        color: white;
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
-        white-space: nowrap;
-        box-shadow: 0 4px 12px rgba(255, 87, 34, 0.4);
-        z-index: 10;
+        animation: ${scaleIn} 0.5s ease-out;
       }
     }
   }

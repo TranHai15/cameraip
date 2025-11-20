@@ -7,7 +7,11 @@ const Statistics = ({ checkIn = 0, checkOut = 0 }) => {
     <StatisticsWrapper>
       <div className="stat-card stat-card-checkin">
         <span className="stat-label">
-          <UserAddOutlined className="stat-label__icon" /> Tổng số đã checkin
+          <UserAddOutlined
+            className="stat-label__icon"
+            style={{ transform: "none" }}
+          />{" "}
+          Tổng số đã checkin
         </span>
         <p className="stat-count">{checkIn}</p>
         {/* <UserAddOutlined className="blur-icon" /> */}

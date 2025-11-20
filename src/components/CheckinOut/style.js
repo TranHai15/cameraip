@@ -119,8 +119,16 @@ export const MainWrapper = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(75, 106, 255, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(159, 92, 255, 0.05) 0%, transparent 50%);
+    background: radial-gradient(
+        circle at 20% 50%,
+        rgba(75, 106, 255, 0.05) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 80%,
+        rgba(159, 92, 255, 0.05) 0%,
+        transparent 50%
+      );
     pointer-events: none;
     z-index: 0;
   }
@@ -130,7 +138,7 @@ export const MainWrapper = styled.div`
     z-index: 1;
   }
 
-  .score  {
+  .score {
     display: flex;
     justify-content: center;
     flex-direction: column;
@@ -140,7 +148,7 @@ export const MainWrapper = styled.div`
     .score-circle {
       width: 60px;
       height: 60px;
-      border-radius:50%;
+      border-radius: 50%;
       background: linear-gradient(90deg, rgb(75, 106, 255), rgb(159, 92, 255));
       display: flex;
       justify-content: center;
@@ -151,7 +159,6 @@ export const MainWrapper = styled.div`
       }
     }
   }
-
 
   .card,
   .card-liveview {
@@ -252,24 +259,27 @@ export const MainWrapper = styled.div`
     border-radius: 12px;
     padding: 10px 24px;
     width: 80%;
-    margin: 0 auto ;
+    margin: 0 auto;
     text-align: center;
   }
 
   .left-panel__top {
     width: 100%;
     min-width: 400px;
-    min-height: 600px;
+    min-height: 730px;
+    max-height: 730px;
+    height: 730px;
     background: #fff;
     border-radius: 24px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    flex: 1;
-    flex-direction: column;
     display: flex;
+    justify-content: space-between;
+    flex-direction: column;
     position: relative;
     animation: ${slideInLeft} 0.6s ease-out;
     transition: all 0.3s ease;
     overflow: hidden;
+    box-sizing: border-box;
 
     &:hover {
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
@@ -292,8 +302,8 @@ export const MainWrapper = styled.div`
   .spin-container {
     position: absolute;
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
     width: 100%;
     height: 100%;
     display: flex;
@@ -305,17 +315,18 @@ export const MainWrapper = styled.div`
   }
 
   .greeting-body {
-    min-height: 500px;
+    min-height: 350px;
+    height: 350px;
     min-width: 400px;
     display: flex;
     align-items: center;
-    flex: 1;
     flex-direction: column;
-    justify-content: space-between;
-    padding: 30px 20px;
+    justify-content: center;
+    padding: 20px;
     gap: 20px;
     animation: ${fadeIn} 0.8s ease-out 0.2s both;
     width: 100%;
+    box-sizing: border-box;
   }
 
   /* ==== LEFT PANEL ==== */
@@ -330,6 +341,9 @@ export const MainWrapper = styled.div`
   /* Header gradient "Xin chào quý khách" */
   .greeting-title {
     width: 100%;
+    height: 90px;
+    min-height: 90px;
+    max-height: 90px;
     background: linear-gradient(90deg, #4b6aff, #9f5cff);
     background-size: 200% 100%;
     border-radius: 24px 24px 0 0;
@@ -338,10 +352,15 @@ export const MainWrapper = styled.div`
     font-weight: 700;
     text-align: center;
     padding: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     animation: ${gradientShift} 3s ease infinite, ${fadeIn} 0.6s ease-out;
     position: relative;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(75, 106, 255, 0.3);
+    box-sizing: border-box;
+    flex-shrink: 0;
 
     &::before {
       content: "";
@@ -350,7 +369,12 @@ export const MainWrapper = styled.div`
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
       animation: ${shimmer} 2s infinite;
     }
 
@@ -369,13 +393,42 @@ export const MainWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 60px;
-    padding: 20px 0;
+    gap: 20px;
+    padding: 10px 0;
     animation: ${scaleIn} 0.6s ease-out 0.4s both;
     position: relative;
     min-width: 300px;
-    min-height: 280px;
+    min-height: 240px;
+    height: 240px;
     width: 100%;
+    flex-shrink: 0;
+  }
+
+  /* Container cho status message */
+  .status-message-container {
+    width: 100%;
+    min-height: 80px;
+    height: 80px;
+    max-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+
+  /* Container cho user info */
+  .user-info-container {
+    width: 100%;
+    min-height: 120px;
+    height: 120px;
+    max-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .camera-container {
@@ -383,12 +436,13 @@ export const MainWrapper = styled.div`
     /* width: 180px; */
     /* height: 180px; */
 
-    video, img {
+    video,
+    img {
       border-radius: 50%;
       /* width: 180px; */
       /* height: 180px; */
       object-fit: cover;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -467,10 +521,10 @@ export const MainWrapper = styled.div`
   }
 
   .greeting-checkin {
-    .anticon, .checkin-time {
+    .anticon,
+    .checkin-time {
       color: rgb(161, 75, 232);
     }
-   
   }
 
   .status-checkin {
@@ -500,7 +554,12 @@ export const MainWrapper = styled.div`
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
       animation: ${shimmer} 2s infinite;
     }
 
@@ -559,7 +618,11 @@ export const MainWrapper = styled.div`
       right: -50%;
       width: 200%;
       height: 200%;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 70%
+      );
       animation: ${pulse} 3s ease-in-out infinite;
     }
 
@@ -614,7 +677,7 @@ export const MainWrapper = styled.div`
     display: block;
     margin-bottom: 0.8rem;
   }
-  
+
   .stat-count {
     font-size: 2.5rem;
   }
@@ -668,7 +731,12 @@ export const MainWrapper = styled.div`
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
       animation: ${shimmer} 2s infinite;
     }
   }
@@ -763,17 +831,17 @@ export const MainWrapper = styled.div`
     /* padding: 0 20px; */
     .status-customer__checkin {
       color: #188038;
-      background-color: #E6F4EA;
+      background-color: #e6f4ea;
       padding: 6px 12px;
       border-radius: 12px;
       font-weight: 500;
     }
     .status-customer__checkout {
-        color: #ff9b34;
-        background-color: #FFF8E1;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: 500;
+      color: #ff9b34;
+      background-color: #fff8e1;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
     }
   }
 
@@ -801,24 +869,27 @@ export const MainWrapper = styled.div`
   }
 
   /* Responsive */
-   @media (max-width: 1600px) {
-    .greeting-title ,.list-title {
-      font-size:1.5rem;
+  @media (max-width: 1600px) {
+    .greeting-title,
+    .list-title {
+      font-size: 1.5rem;
     }
-   }
+  }
   @media (max-width: 1024px) {
     flex-direction: column;
     height: auto !important;
     .stat-count {
       font-size: 1.5rem;
-    } 
-    .left-panel, .right-panel {
+    }
+    .left-panel,
+    .right-panel {
       margin: 12px;
       width: auto;
     }
 
-    .greeting-title ,.list-title {
-      font-size:1.2rem;
+    .greeting-title,
+    .list-title {
+      font-size: 1.2rem;
     }
 
     .stat-label {

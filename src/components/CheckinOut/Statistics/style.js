@@ -5,7 +5,9 @@ export const StatisticsWrapper = styled.div`
   gap: 20px;
   margin-top: 1.5rem;
   width: 100%;
-  min-height: 90px;
+  min-height: 165px;
+  height: 165px;
+  max-height: 165px;
   justify-content: center;
 
   .stat-card {
@@ -44,7 +46,6 @@ export const StatisticsWrapper = styled.div`
       right: 10px;
       font-size: 5rem;
       top: 50%;
-      transform: translateY(-50%);
       opacity: 0.3;
     }
   }

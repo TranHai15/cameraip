@@ -30,7 +30,7 @@ export default {
   // ============================================
   // 4. FACE COMPARISON THRESHOLD
   // ============================================
-  scoreCompare: 60, // Ngưỡng điểm khớp khuôn mặt (0-100)
+  scoreCompare: 40, // Ngưỡng điểm khớp khuôn mặt (0-100)
 
   // ============================================
   // 5. UI CONFIGURATION
@@ -68,6 +68,6 @@ export default {
     cardError: "Vui lòng thử lại!",
     checkinSuccess: "Đăng ký thành công!",
     faceNotMatch: "Vui lòng thử lại.",
-    waitingFaceServer: "Chờ quét thẻ...",
+    waitingFaceServer: "Vui lòng quét thẻ căn cước để đăng ký",
   },
 };

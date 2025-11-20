@@ -5,7 +5,7 @@ import moment from "moment";
 import settings from "../../config/settings";
 import checkinApi from "../../services/checkinApi";
 import faceServerService from "../../services/faceServerService";
-
+import anhbg from "../../assets/insert-card-animation-gif-download-6988052.webp";
 // Import các component con
 import CardImage from "./CardImage";
 import VideoStream from "./VideoStream";
@@ -14,6 +14,7 @@ import UserInfo from "./UserInfo";
 import StatusMessage from "./StatusMessage";
 import Statistics from "./Statistics";
 import CheckinList from "./CheckinList";
+import StatusMessage2 from "./StatusMessage2";
 
 const TYPE = {
   ERROR: 1,
@@ -290,7 +291,7 @@ export default function CheckinOut() {
         setTimeout(() => {
           console.log("🖼️ [SOCKET_CARD] Ẩn ảnh thẻ, chuyển sang camera");
           setShowCardImage(false);
-        }, 2000); // 2 giây
+        }, 0); // 2 giây
 
         // Gửi lệnh bắt đầu chụp ảnh từ face-server ngay lập tức (bỏ delay)
         console.log("📷 [SOCKET_CARD] Khởi động face-server capture...");
@@ -797,24 +798,37 @@ export default function CheckinOut() {
             <div className="greeting-body">
               <div className="empty"></div>
 
-              <div className="face-wrapper ">
+              <div className="face-wrapper">
+                {!shouldShowVideo && !hasCapturedImage && (
+                  <div>
+                    <img src={anhbg} alt="ảnh căn cước" />
+                  </div>
+                )}
                 {/* Module 1: Ảnh căn cước - Chỉ hiển thị trong 2s đầu sau khi quét thẻ */}
-                {shouldShowCardImage && (
+                {/* {shouldShowCardImage && (
                   <CardImage
                     imageSrc={currentCheckin.imageChanDung}
                     size={settings.avatarSize}
                   />
-                )}
+                )} */}
 
                 {/* Module 2 & 3: Video hoặc Ảnh chụp */}
                 {shouldShowVideo ? (
                   // Hiển thị VideoStream khi có dữ liệu thẻ nhưng chưa có ảnh chụp
-                  <VideoStream
-                    videoUrl={videoFeedUrl}
-                    faceStatus={faceStatus}
-                    width={settings.cameraWidth}
-                    height={settings.cameraHeight}
-                  />
+                  <div
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <VideoStream
+                      videoUrl={videoFeedUrl}
+                      faceStatus={faceStatus}
+                      width={settings.cameraWidth}
+                      height={settings.cameraHeight}
+                    />
+                  </div>
                 ) : hasCapturedImage ? (
                   // Hiển thị CapturedImage khi đã có ảnh chụp (với CSS success/error)
                   <CapturedImage
@@ -825,26 +839,37 @@ export default function CheckinOut() {
                   />
                 ) : null}
               </div>
+            </div>
 
-              {/* Module 5: Thông tin user + Module 6: Status message */}
+            {/* Thông báo status - Luôn dùng relative để nằm trong flow, không chồng lên */}
+            <div className="status-message-container">
+              {!shouldShowVideo ? (
+                <StatusMessage
+                  message={statusRes.message}
+                  type={
+                    statusRes.type === TYPE.SUCCESS
+                      ? "SUCCESS"
+                      : statusRes.type === TYPE.ERROR
+                      ? "ERROR"
+                      : null
+                  }
+                  colorSuccess={COLOR_SUCCESS}
+                  colorError={COLOR_ERROR}
+                />
+              ) : (
+                <StatusMessage2
+                  message={faceStatus.message}
+                  type={faceStatus.status}
+                />
+              )}
+            </div>
+
+            {/* Module 5: Thông tin user */}
+            <div className="user-info-container">
               <UserInfo
                 hoVaTen={currentCheckin.HoVaTen}
                 soCMND={currentCheckin.SoCMND}
                 checkinAt={currentCheckin.checkinAt}
-                statusMessage={
-                  <StatusMessage
-                    message={statusRes.message}
-                    type={
-                      statusRes.type === TYPE.SUCCESS
-                        ? "SUCCESS"
-                        : statusRes.type === TYPE.ERROR
-                        ? "ERROR"
-                        : null
-                    }
-                    colorSuccess={COLOR_SUCCESS}
-                    colorError={COLOR_ERROR}
-                  />
-                }
               />
             </div>
           </div>

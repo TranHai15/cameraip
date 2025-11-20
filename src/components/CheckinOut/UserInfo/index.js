@@ -13,7 +13,12 @@ const UserInfo = ({ hoVaTen, soCMND, checkinAt, statusMessage }) => {
   return (
     <UserInfoWrapper>
       {statusMessage}
-      <div className="greeting-name">{hoVaTen || ""}</div>
+      <div
+        className="greeting-name"
+        style={{ fontSize: "1.5rem", fontWeight: "bold", height: "20px" }}
+      >
+        {hoVaTen || ""}
+      </div>
       <div className="greeting-cccd">
         <CreditCardOutlined /> Thẻ căn cước:{" "}
         {soCMND ? shortenNumberString(soCMND) : "........."}

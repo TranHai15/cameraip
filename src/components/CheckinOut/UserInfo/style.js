@@ -24,17 +24,15 @@ const slideIn = keyframes`
 
 export const UserInfoWrapper = styled.div`
   width: 100%;
-  min-width: 300px;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: linear-gradient(135deg, #f4f7fb 0%, #ffffff 100%);
-  padding: 24px 20px;
   gap: 1rem;
-  border-radius: 20px;
   justify-content: center;
-  min-height: 200px;
+  min-height: 120px;
+  height: 120px;
+  max-height: 120px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   animation: ${fadeIn} 0.6s ease-out;
   transition: all 0.3s ease;
@@ -87,4 +85,3 @@ export const UserInfoWrapper = styled.div`
     }
   }
 `;
-
