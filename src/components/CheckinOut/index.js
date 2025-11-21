@@ -7,7 +7,6 @@ import checkinApi from "../../services/checkinApi";
 import faceServerService from "../../services/faceServerService";
 import anhbg from "../../assets/insert-card-animation-gif-download-6988052.webp";
 // Import các component con
-import CardImage from "./CardImage";
 import VideoStream from "./VideoStream";
 import CapturedImage from "./CapturedImage";
 import UserInfo from "./UserInfo";
@@ -53,12 +52,12 @@ export default function CheckinOut() {
     status: "idle", // idle, waiting, adjusting, ready, capturing, error
     message: settings.defaultMessages.waitingFaceServer,
   });
-  const [showCardImage, setShowCardImage] = useState(false); // Hiển thị ảnh thẻ trong 2s sau khi quét
   const [connectionStatus, setConnectionStatus] = useState({
     faceServer: "connecting", // connecting, connected, error
     webSocket: "connecting", // connecting, connected, error
   });
   const [faceRetryCount, setFaceRetryCount] = useState(0);
+  const [videoReady, setVideoReady] = useState(false); // Track video stream đã sẵn sàng
 
   const listCheckinRef = useRef(listCheckin);
   const currentRefCheckin = useRef(null);
@@ -68,6 +67,7 @@ export default function CheckinOut() {
   const scoreCompareFace = settings.scoreCompare;
   const wsReconnectAttemptsRef = useRef(0);
   const wsReconnectTimerRef = useRef(null);
+  const videoPreloadRef = useRef(null); // Ref để lưu preload element
   let delayChamCong = null;
 
   useEffect(() => {
@@ -194,6 +194,89 @@ export default function CheckinOut() {
     };
   }, []);
 
+  // Preload video stream ngay khi face-server connected để tối ưu hiển thị
+  useEffect(() => {
+    if (connectionStatus.faceServer === "connected" && !videoReady) {
+      console.log("📹 [VIDEO_PRELOAD] Bắt đầu preload video stream...");
+      const videoFeedUrl = faceServerService.getVideoFeedUrl();
+      
+      // Tạo hidden img element để preload video stream (MJPEG)
+      const preloadImg = document.createElement('img');
+      preloadImg.src = videoFeedUrl;
+      preloadImg.style.position = 'absolute';
+      preloadImg.style.width = '1px';
+      preloadImg.style.height = '1px';
+      preloadImg.style.opacity = '0';
+      preloadImg.style.pointerEvents = 'none';
+      preloadImg.style.zIndex = '-1';
+      
+      // Với MJPEG stream, onload có thể không được gọi
+      // Sử dụng onloadstart để detect khi stream bắt đầu
+      let loadStartTimer = null;
+      let errorRetryTimer = null;
+      
+      preloadImg.onloadstart = () => {
+        console.log("📹 [VIDEO_PRELOAD] Video stream bắt đầu load...");
+        // Coi như ready sau 500ms khi stream đã bắt đầu
+        loadStartTimer = setTimeout(() => {
+          console.log("✅ [VIDEO_PRELOAD] Video stream đã sẵn sàng (warmup hoàn tất)");
+          setVideoReady(true);
+        }, 500);
+      };
+      
+      // Fallback: Coi như ready sau 1 giây nếu không có onloadstart
+      const fallbackTimer = setTimeout(() => {
+        if (!videoReady) {
+          console.log("✅ [VIDEO_PRELOAD] Video stream coi như sẵn sàng (fallback timer)");
+          setVideoReady(true);
+        }
+      }, 1000);
+      
+      preloadImg.onerror = (e) => {
+        console.error("❌ [VIDEO_PRELOAD] Lỗi preload video stream:", e);
+        // Clear timers
+        if (loadStartTimer) clearTimeout(loadStartTimer);
+        clearTimeout(fallbackTimer);
+        
+        // Retry sau 2 giây nếu lỗi
+        errorRetryTimer = setTimeout(() => {
+          if (connectionStatus.faceServer === "connected" && !videoReady && videoPreloadRef.current) {
+            console.log("🔄 [VIDEO_PRELOAD] Retry preload video stream...");
+            videoPreloadRef.current.src = videoFeedUrl + '?t=' + Date.now(); // Thêm timestamp để bypass cache
+          }
+        }, 2000);
+      };
+      
+      document.body.appendChild(preloadImg);
+      videoPreloadRef.current = preloadImg;
+      
+      return () => {
+        // Clear all timers
+        if (loadStartTimer) clearTimeout(loadStartTimer);
+        if (errorRetryTimer) clearTimeout(errorRetryTimer);
+        clearTimeout(fallbackTimer);
+        
+        // Cleanup preload element
+        if (videoPreloadRef.current && document.body.contains(videoPreloadRef.current)) {
+          console.log("🧹 [VIDEO_PRELOAD] Cleanup preload element");
+          document.body.removeChild(videoPreloadRef.current);
+          videoPreloadRef.current = null;
+        }
+      };
+    }
+  }, [connectionStatus.faceServer, videoReady]);
+
+  // Cleanup video preload khi component unmount
+  useEffect(() => {
+    return () => {
+      if (videoPreloadRef.current && document.body.contains(videoPreloadRef.current)) {
+        console.log("🧹 [VIDEO_PRELOAD] Cleanup preload element on unmount");
+        document.body.removeChild(videoPreloadRef.current);
+        videoPreloadRef.current = null;
+      }
+    };
+  }, []);
+
   const getTotalCheckInOut = () => {
     console.log("📊 [STATS] Lấy thống kê check-in/check-out trong ngày...");
     checkinApi
@@ -280,7 +363,6 @@ export default function CheckinOut() {
           Score: null,
         });
         setStateScan(null);
-        setShowCardImage(false); // Ẩn ảnh thẻ khi thẻ đã lấy ra
         // Dừng chụp ảnh khi thẻ đã lấy ra
         console.log("⏹️ [SOCKET_CARD] Dừng capture ảnh khuôn mặt");
         faceServerService.stopCapture();
@@ -351,29 +433,26 @@ export default function CheckinOut() {
           return;
         }
 
-        // Đợi 2 giây để hiển thị message thành công, sau đó chuyển sang message từ face-server
-        setTimeout(() => {
-          // Gửi lệnh bắt đầu chụp ảnh từ face-server
-          console.log("📷 [SOCKET_CARD] Khởi động face-server capture...");
-          // Kiểm tra trực tiếp từ service thay vì state (tránh closure issue)
-          if (faceServerService.isConnected && currentRefCheckin.current) {
-            console.log(
-              "✅ [SOCKET_CARD] Face-server đã kết nối, gửi lệnh start_capture"
-            );
-            faceServerService.startCapture();
-            console.log(
-              "✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt"
-            );
-          } else {
-            console.log(
-              "⚠️ [SOCKET_CARD] Face-server chưa kết nối hoặc thẻ đã lấy ra:",
-              {
-                isConnected: faceServerService.isConnected,
-                hasCard: !!currentRefCheckin.current,
-              }
-            );
-          }
-        }, 2000);
+        // Khởi động camera ngay lập tức để tối ưu trải nghiệm
+        console.log("📷 [SOCKET_CARD] Khởi động face-server capture ngay lập tức...");
+        // Kiểm tra trực tiếp từ service thay vì state (tránh closure issue)
+        if (faceServerService.isConnected && currentRefCheckin.current) {
+          console.log(
+            "✅ [SOCKET_CARD] Face-server đã kết nối, gửi lệnh start_capture"
+          );
+          faceServerService.startCapture();
+          console.log(
+            "✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt"
+          );
+        } else {
+          console.log(
+            "⚠️ [SOCKET_CARD] Face-server chưa kết nối hoặc thẻ đã lấy ra:",
+            {
+              isConnected: faceServerService.isConnected,
+              hasCard: !!currentRefCheckin.current,
+            }
+          );
+        }
       }
 
       if (data.Status === "FAILURE") {
@@ -706,7 +785,6 @@ export default function CheckinOut() {
       Score: null,
     });
     setStateScan(0);
-    setShowCardImage(false);
     setLoadingDataScan(false);
     setdelayCC(0);
     setFaceRetryCount(0);
@@ -937,11 +1015,10 @@ export default function CheckinOut() {
 
   // Logic hiển thị:
   // 1. Mặc định: Không hiển thị gì (chưa có dữ liệu thẻ)
-  // 2. Có dữ liệu thẻ, showCardImage = true (2s đầu): Chỉ CardImage (chưa hiển thị VideoStream)
-  // 3. Có dữ liệu thẻ, showCardImage = false (sau 2s): Chỉ VideoStream (ẩn CardImage)
-  // 4. Có ảnh chụp: Chỉ CapturedImage (ẩn CardImage và VideoStream)
-  // 5. Có ảnh chụp và thành công: CapturedImage có CSS success
-  // 6. Có ảnh chụp nhưng thất bại: Quay lại chỉ VideoStream (FaceImg đã được reset)
+  // 2. Có dữ liệu thẻ: Hiển thị VideoStream ngay lập tức (đã được preload sẵn)
+  // 3. Có ảnh chụp: Chỉ CapturedImage (ẩn VideoStream)
+  // 4. Có ảnh chụp và thành công: CapturedImage có CSS success
+  // 5. Có ảnh chụp nhưng thất bại: Quay lại chỉ VideoStream (FaceImg đã được reset)
 
   const hasCardData = !!currentCheckin.imageChanDung;
   const hasCapturedImage = !!currentCheckin.FaceImg;
@@ -967,10 +1044,16 @@ export default function CheckinOut() {
       message: statusRes.message,
     });
   }
-  // Hiển thị CardImage chỉ trong 2s đầu sau khi quét thẻ, và khi có ảnh chụp thì không hiển thị
-  const shouldShowCardImage = showCardImage && !hasCapturedImage;
-  // Chỉ hiển thị VideoStream sau khi ẩn CardImage (sau 2s) và chưa có ảnh chụp
-  const shouldShowVideo = hasCardData && !hasCapturedImage && !showCardImage;
+  // Hiển thị VideoStream ngay khi có dữ liệu thẻ và chưa có ảnh chụp
+  // Video đã được preload sẵn khi face-server connected, nên sẽ hiển thị ngay lập tức
+  const shouldShowVideo = hasCardData && !hasCapturedImage;
+  
+  // Log video ready status khi cần hiển thị video
+  if (shouldShowVideo && !videoReady) {
+    console.log("⏳ [VIDEO] Video stream chưa sẵn sàng, đang chờ preload...");
+  } else if (shouldShowVideo && videoReady) {
+    console.log("✅ [VIDEO] Video stream đã sẵn sàng, hiển thị ngay lập tức");
+  }
 
   const COLOR_SUCCESS = "#fff";
   const COLOR_ERROR = "#fff";
@@ -1006,15 +1089,7 @@ export default function CheckinOut() {
                     />
                   </div>
                 )}
-                {/* Module 1: Ảnh căn cước - Chỉ hiển thị trong 2s đầu sau khi quét thẻ */}
-                {/* {shouldShowCardImage && (
-                  <CardImage
-                    imageSrc={currentCheckin.imageChanDung}
-                    size={settings.avatarSize}
-                  />
-                )} */}
-
-                {/* Module 2 & 3: Video hoặc Ảnh chụp */}
+                {/* Module: Video hoặc Ảnh chụp */}
                 {shouldShowVideo ? (
                   // Hiển thị VideoStream khi có dữ liệu thẻ nhưng chưa có ảnh chụp
                   <div

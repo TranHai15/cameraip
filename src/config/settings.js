@@ -10,9 +10,9 @@ export default {
   // ============================================
   // 1. API ENDPOINTS
   // ============================================
-  apiInOut: "https://apigocheckinv4.gosol.com.vn/api/v1/",
-  apiInOutv2: "https://apigocheckinv4.gosol.com.vn/api/v2/",
-  apiInOutv4: "https://apigocheckinv4.gosol.com.vn/api/v4/",
+  apiInOut: "http://192.168.100.11:8989/api/v1/",
+  apiInOutv2: "http://192.168.100.11:8989/api/v2/",
+  apiInOutv4: "http://192.168.100.11:8989/api/v4/",
   apiImage: "https://ocrcorev1.gosol.com.vn/ekyc/",
 
   // ============================================

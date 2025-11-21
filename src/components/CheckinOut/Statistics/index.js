@@ -9,7 +9,7 @@ const Statistics = ({ checkIn = 0, checkOut = 0 }) => {
         <span className="stat-label">
           <UserAddOutlined
             className="stat-label__icon"
-            style={{ transform: "none" }}
+            style={{ transform: "none", animation: "none" }}
           />{" "}
           Tổng số đã checkin
         </span>
@@ -18,7 +18,11 @@ const Statistics = ({ checkIn = 0, checkOut = 0 }) => {
       </div>
       <div className="stat-card stat-card-checkout">
         <span className="stat-label">
-          <UserDeleteOutlined className="stat-label__icon" /> Đã checkout
+          <UserDeleteOutlined
+            className="stat-label__icon"
+            style={{ transform: "none", animation: "none" }}
+          />{" "}
+          Đã checkout
         </span>
         <p className="stat-count">{checkOut}</p>
         {/* <UserDeleteOutlined className="blur-icon" /> */}

@@ -26,7 +26,7 @@ const CapturedImage = ({
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
-                borderRadius: "50%",
+                borderRadius: "10%",
               }}
               src={imageSrc}
               // className="captured-avatar"
