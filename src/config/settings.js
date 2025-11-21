@@ -30,7 +30,7 @@ export default {
   // ============================================
   // 4. FACE COMPARISON THRESHOLD
   // ============================================
-  scoreCompare: 40, // Ngưỡng điểm khớp khuôn mặt (0-100)
+  scoreCompare: 50, // Ngưỡng điểm khớp khuôn mặt (0-100)
 
   // ============================================
   // 5. UI CONFIGURATION
@@ -42,11 +42,14 @@ export default {
   // ============================================
   // 6. TIMEOUT & DELAY CONFIGURATION
   // ============================================
-  successMessageDelay: 3000, // Thời gian hiển thị thông báo thành công (ms)
+  successMessageDelay: 4000, // Thời gian hiển thị thông báo thành công (ms) - Tăng từ 3000ms
+  errorMessageDelay: 5000, // Thời gian hiển thị thông báo lỗi (ms)
   retryCaptureDelay: 3000, // Thời gian chờ trước khi chụp lại (ms)
   compareFaceDelay: 2000, // Thời gian delay sau khi so sánh thất bại (ms)
   socketReconnectDelay: 1000, // Thời gian delay reconnect socket (ms)
-  socketReconnectAttempts: 5, // Số lần thử reconnect
+  socketReconnectAttempts: 10, // Số lần thử reconnect - Tăng từ 5
+  apiTimeout: 30000, // Timeout cho API calls (ms)
+  maxFaceRetryCount: 3, // Số lần retry tối đa khi so sánh face thất bại
 
   // ============================================
   // 7. PAGINATION CONFIGURATION

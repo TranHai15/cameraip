@@ -54,6 +54,7 @@ const callApi = (
     params,
     headers,
     responseType: responseType,
+    timeout: 30000, // 30 seconds timeout
   })
     .then(function (response) {
       return response;

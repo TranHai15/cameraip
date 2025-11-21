@@ -8,10 +8,14 @@ class FaceServerService {
     this.isConnected = false;
   }
 
-  connect(onCaptureSuccess, onError, onFaceStatus) {
+  connect(onCaptureSuccess, onError, onFaceStatus, onConnect) {
     console.log("🔌 [FACE_SERVER] Kiểm tra kết nối face-server...");
     if (this.socket && this.isConnected) {
       console.log("✅ [FACE_SERVER] Face-server đã kết nối, bỏ qua");
+      // Nếu đã kết nối, gọi onConnect callback ngay
+      if (onConnect) {
+        onConnect();
+      }
       return;
     }
 
@@ -29,12 +33,17 @@ class FaceServerService {
       console.log("✅ [FACE_SERVER] Kết nối face-server thành công");
       console.log("📡 [FACE_SERVER] Sẵn sàng nhận lệnh capture và gửi ảnh");
       this.isConnected = true;
+      // Gọi callback để component cập nhật connectionStatus
+      if (onConnect) {
+        onConnect();
+      }
     });
 
     this.socket.on("disconnect", () => {
       console.log("❌ [FACE_SERVER] Mất kết nối face-server");
       console.log("⚠️ [FACE_SERVER] Camera có thể không hoạt động");
       this.isConnected = false;
+      // Có thể thêm callback onDisconnect nếu cần
     });
 
     this.socket.on("connect_error", (error) => {

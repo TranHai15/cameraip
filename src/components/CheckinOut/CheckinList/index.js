@@ -30,7 +30,16 @@ const CheckinList = ({
     // Lấy item mới nhất (đầu tiên sau khi sort)
     return sorted[0]?.GioVao || null;
   }, [listCheckin]);
-
+  const gender = (key) => {
+    switch (key) {
+      case "Nam":
+        return "Ông";
+      case "Nữ":
+        return "Bà";
+      default:
+        return "Khách";
+    }
+  };
   return (
     <CheckinListWrapper>
       <div className="list-title">Danh sách khách đã Đăng ký</div>
@@ -64,7 +73,9 @@ const CheckinList = ({
                 />
                 <div className="customer-info">
                   <div className="info">
-                    <div className="customer-name">{item.HoVaTen}</div>
+                    <div className="customer-name">
+                      {gender(item.GioiTinh)} {item.HoVaTen}
+                    </div>
                     <div className="customer-cccd">
                       {shortenNumberString(item.SoCMND)}
                     </div>

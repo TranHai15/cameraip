@@ -54,6 +54,11 @@ export default function CheckinOut() {
     message: settings.defaultMessages.waitingFaceServer,
   });
   const [showCardImage, setShowCardImage] = useState(false); // Hiển thị ảnh thẻ trong 2s sau khi quét
+  const [connectionStatus, setConnectionStatus] = useState({
+    faceServer: "connecting", // connecting, connected, error
+    webSocket: "connecting", // connecting, connected, error
+  });
+  const [faceRetryCount, setFaceRetryCount] = useState(0);
 
   const listCheckinRef = useRef(listCheckin);
   const currentRefCheckin = useRef(null);
@@ -61,6 +66,8 @@ export default function CheckinOut() {
   const refCallingApi = useRef(isCallingApi);
   const delayDetectFace = useRef(delayCC);
   const scoreCompareFace = settings.scoreCompare;
+  const wsReconnectAttemptsRef = useRef(0);
+  const wsReconnectTimerRef = useRef(null);
   let delayChamCong = null;
 
   useEffect(() => {
@@ -85,12 +92,17 @@ export default function CheckinOut() {
     console.log("🔌 [INIT] Khởi tạo kết nối WebSocket quét thẻ...");
     handleConnectSocketScan();
 
-    // Kết nối face-server
+    // Kết nối face-server - Kết nối sớm khi load web
     console.log("🔌 [INIT] Khởi tạo kết nối face-server...");
     faceServerService.connect(
       // onCaptureSuccess: Khi nhận được ảnh từ face-server
       (base64Image) => {
         console.log("📸 [INIT] Nhận ảnh từ face-server, bắt đầu so sánh...");
+        // Kiểm tra connection status trước khi xử lý (kiểm tra trực tiếp từ service)
+        if (!faceServerService.isConnected) {
+          console.log("⚠️ [INIT] Face-server chưa kết nối, bỏ qua ảnh");
+          return;
+        }
         if (!refCallingApi.current && currentRefCheckin.current) {
           console.log("✅ [INIT] Điều kiện hợp lệ, gọi handleCompareFace");
           handleCompareFace(base64Image, currentRefCheckin.current);
@@ -103,22 +115,49 @@ export default function CheckinOut() {
       // onError: Xử lý lỗi kết nối
       (error) => {
         console.error("❌ [INIT] Lỗi kết nối face-server:", error);
-        message.warning(
-          "Không thể kết nối đến face-server. Vui lòng kiểm tra lại."
-        );
+        setConnectionStatus((prev) => ({ ...prev, faceServer: "error" }));
+        setStatusRes({
+          message: "Không thể kết nối đến face-server. Đang thử kết nối lại...",
+          type: TYPE.ERROR,
+          Score: null,
+        });
+        // Dừng tất cả hành động liên quan đến face-server
+        setCurrentCheckin({});
+        currentRefCheckin.current = null;
+        faceServerService.stopCapture();
       },
       // onFaceStatus: Nhận status và message từ BE
       (data) => {
         console.log("📊 [INIT] Nhận face status:", data);
-        if (data && data.status && data.message) {
+        if (data && data.status) {
           console.log(
-            `🔄 [INIT] Cập nhật face status: ${data.status} - ${data.message}`
+            `🔄 [INIT] Cập nhật face status: ${data.status} - ${
+              data.message || ""
+            }`
           );
           setFaceStatus({
             status: data.status,
-            message: data.message,
+            message: data.message || settings.defaultMessages.waitingFaceServer,
           });
+          // Cập nhật connection status khi có lỗi
+          if (data.status === "error") {
+            setConnectionStatus((prev) => ({ ...prev, faceServer: "error" }));
+          }
         }
+      },
+      // onConnect: Khi socket kết nối thành công
+      () => {
+        console.log(
+          "✅ [INIT] Face-server socket đã kết nối, cập nhật connectionStatus"
+        );
+        setConnectionStatus((prev) => {
+          if (prev.faceServer !== "connected") {
+            console.log(
+              "✅ [INIT] Cập nhật connectionStatus.faceServer = 'connected'"
+            );
+          }
+          return { ...prev, faceServer: "connected" };
+        });
       }
     );
 
@@ -139,6 +178,10 @@ export default function CheckinOut() {
       if (delayChamCong) {
         console.log("⏰ [CLEANUP] Clear interval delayChamCong");
         clearInterval(delayChamCong);
+      }
+      if (wsReconnectTimerRef.current) {
+        console.log("⏰ [CLEANUP] Clear WebSocket reconnect timer");
+        clearTimeout(wsReconnectTimerRef.current);
       }
       if (socketRef.current) {
         console.log("🔌 [CLEANUP] Đóng kết nối WebSocket");
@@ -193,6 +236,7 @@ export default function CheckinOut() {
     console.log(
       `🔌 [SOCKET_CARD] Bắt đầu kết nối WebSocket đến port ${settings.socketPort}...`
     );
+    setConnectionStatus((prev) => ({ ...prev, webSocket: "connecting" }));
     const socket = new WebSocket(`ws://localhost:${settings.socketPort}`);
     socketRef.current = socket;
     console.log("🔌 [SOCKET_CARD] WebSocket instance được tạo");
@@ -204,6 +248,8 @@ export default function CheckinOut() {
       console.log(
         "📡 [SOCKET_CARD] Sẵn sàng nhận dữ liệu từ thiết bị quét thẻ CCCD"
       );
+      setConnectionStatus((prev) => ({ ...prev, webSocket: "connected" }));
+      wsReconnectAttemptsRef.current = 0; // Reset counter khi kết nối thành công
     };
 
     socketRef.current.onmessage = (event) => {
@@ -214,6 +260,11 @@ export default function CheckinOut() {
       if (data.EventName === "READ") {
         console.log("🔄 [SOCKET_CARD] Event READ - Bắt đầu đọc thẻ...");
         setLoadingDataScan(true);
+        setStatusRes({
+          message: "Đang đọc thẻ căn cước...",
+          type: null,
+          Score: null,
+        });
       }
 
       if (data.NewState === "EMPTY") {
@@ -276,29 +327,53 @@ export default function CheckinOut() {
         });
 
         setStatusRes({
-          message: settings.defaultMessages.waitingFace,
-          type: null,
+          message: "Đã đọc thẻ thành công. Vui lòng nhìn vào camera",
+          type: TYPE.SUCCESS,
           Score: null,
         });
         setStateScan(null);
         console.log("🔄 [SOCKET_CARD] Chuyển trạng thái: chờ chụp khuôn mặt");
         setCurrentCheckin(dataReaded);
         currentRefCheckin.current = dataReaded;
+        setFaceRetryCount(0); // Reset retry counter khi có thẻ mới
 
-        // Hiển thị ảnh thẻ trong 2 giây, sau đó ẩn đi
-        console.log("🖼️ [SOCKET_CARD] Hiển thị ảnh thẻ CCCD trong 2 giây");
-        setShowCardImage(true);
+        // Kiểm tra connection status trước khi start capture
+        // Kiểm tra trực tiếp từ service để tránh closure issue
+        if (!faceServerService.isConnected) {
+          console.log(
+            "⚠️ [SOCKET_CARD] Face-server chưa kết nối, không thể chụp ảnh"
+          );
+          setStatusRes({
+            message: "Face-server chưa sẵn sàng. Đang chờ kết nối...",
+            type: TYPE.ERROR,
+            Score: null,
+          });
+          return;
+        }
+
+        // Đợi 2 giây để hiển thị message thành công, sau đó chuyển sang message từ face-server
         setTimeout(() => {
-          console.log("🖼️ [SOCKET_CARD] Ẩn ảnh thẻ, chuyển sang camera");
-          setShowCardImage(false);
-        }, 0); // 2 giây
-
-        // Gửi lệnh bắt đầu chụp ảnh từ face-server ngay lập tức (bỏ delay)
-        console.log("📷 [SOCKET_CARD] Khởi động face-server capture...");
-        faceServerService.startCapture();
-        console.log(
-          "✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt"
-        );
+          // Gửi lệnh bắt đầu chụp ảnh từ face-server
+          console.log("📷 [SOCKET_CARD] Khởi động face-server capture...");
+          // Kiểm tra trực tiếp từ service thay vì state (tránh closure issue)
+          if (faceServerService.isConnected && currentRefCheckin.current) {
+            console.log(
+              "✅ [SOCKET_CARD] Face-server đã kết nối, gửi lệnh start_capture"
+            );
+            faceServerService.startCapture();
+            console.log(
+              "✅ [SOCKET_CARD] Đã gửi lệnh start_capture, chờ ảnh khuôn mặt"
+            );
+          } else {
+            console.log(
+              "⚠️ [SOCKET_CARD] Face-server chưa kết nối hoặc thẻ đã lấy ra:",
+              {
+                isConnected: faceServerService.isConnected,
+                hasCard: !!currentRefCheckin.current,
+              }
+            );
+          }
+        }, 2000);
       }
 
       if (data.Status === "FAILURE") {
@@ -318,6 +393,13 @@ export default function CheckinOut() {
     socketRef.current.onerror = (error) => {
       console.log("❌ [SOCKET_CARD] Lỗi WebSocket:", error);
       setLoadingDataScan(false);
+      setConnectionStatus((prev) => ({ ...prev, webSocket: "error" }));
+      setStatusRes({
+        message:
+          "Không thể kết nối đến thiết bị quét thẻ. Đang thử kết nối lại...",
+        type: TYPE.ERROR,
+        Score: null,
+      });
     };
 
     socketRef.current.onclose = (event) => {
@@ -325,8 +407,46 @@ export default function CheckinOut() {
       setLoadingDataScan(false);
       const reason = logEventErrorSocket(event);
       console.log(`🔍 [SOCKET_CARD] Lý do đóng kết nối: ${reason}`);
-      console.log("⚠️ [SOCKET_CARD] Cần kiểm tra thiết bị quét thẻ CCCD");
+
+      // Chỉ reconnect nếu không phải normal closure (code 1000)
+      if (event.code !== 1000) {
+        setConnectionStatus((prev) => ({ ...prev, webSocket: "error" }));
+        setStatusRes({
+          message: "Mất kết nối đến thiết bị quét thẻ. Đang thử kết nối lại...",
+          type: TYPE.ERROR,
+          Score: null,
+        });
+        reconnectWebSocket();
+      } else {
+        setConnectionStatus((prev) => ({ ...prev, webSocket: "connecting" }));
+      }
     };
+  };
+
+  const reconnectWebSocket = () => {
+    if (wsReconnectAttemptsRef.current >= settings.socketReconnectAttempts) {
+      console.log("❌ [SOCKET_CARD] Đã thử reconnect tối đa, dừng lại");
+      setStatusRes({
+        message:
+          "Không thể kết nối đến thiết bị quét thẻ. Vui lòng kiểm tra lại thiết bị.",
+        type: TYPE.ERROR,
+        Score: null,
+      });
+      return;
+    }
+
+    wsReconnectAttemptsRef.current += 1;
+    const delay = Math.min(
+      1000 * Math.pow(2, wsReconnectAttemptsRef.current - 1),
+      16000
+    ); // Exponential backoff, max 16s
+    console.log(
+      `🔄 [SOCKET_CARD] Thử reconnect lần ${wsReconnectAttemptsRef.current}/${settings.socketReconnectAttempts} sau ${delay}ms...`
+    );
+
+    wsReconnectTimerRef.current = setTimeout(() => {
+      handleConnectSocketScan();
+    }, delay);
   };
 
   const ScrollContainer = (e) => {
@@ -517,29 +637,7 @@ export default function CheckinOut() {
             `⏳ [CHECKIN_API] Chờ ${settings.successMessageDelay}ms trước khi reset...`
           );
           setTimeout(() => {
-            console.log(
-              "🧹 [CHECKIN_API] Reset toàn bộ trạng thái sau thành công..."
-            );
-            setCurrentCheckin({});
-            currentRefCheckin.current = null;
-            setStatusRes({
-              message: settings.defaultMessages.waitingCard,
-              type: TYPE.ERROR,
-              Score: null,
-            });
-            setStateScan(0); // Reset về giá trị ban đầu
-            setShowCardImage(false); // Ẩn ảnh thẻ
-            setLoadingDataScan(false); // Đảm bảo không còn loading
-            setdelayCC(0); // Reset delay counter
-            setFaceStatus({
-              status: "idle",
-              message: settings.defaultMessages.waitingFaceServer,
-            });
-            // Dừng capture nếu đang chạy
-            faceServerService.stopCapture();
-            console.log(
-              "✅ [CHECKIN_API] Đã reset xong, sẵn sàng cho người dùng tiếp theo"
-            );
+            resetAllState();
           }, settings.successMessageDelay); // Sau khi hiển thị thông báo thành công
         } else {
           console.log("❌ [CHECKIN_API] CHECK-IN THẤT BẠI!");
@@ -560,31 +658,66 @@ export default function CheckinOut() {
           // Reset toàn bộ dữ liệu khi check-in thất bại để chuẩn bị cho lần mới
           console.log("🧹 [CHECKIN_API] Reset trạng thái sau thất bại...");
           setTimeout(() => {
-            setCurrentCheckin({}); // Reset hoàn toàn thông tin người dùng
-            currentRefCheckin.current = null;
-            setStateScan(0); // Reset về giá trị ban đầu
-            setdelayCC(0); // Reset delay counter
-            setFaceStatus({
-              status: "idle",
-              message: settings.defaultMessages.waitingFaceServer,
-            });
-            // Dừng capture và chờ quét thẻ mới
-            faceServerService.stopCapture();
-            console.log(
-              "✅ [CHECKIN_API] Đã reset xong, chờ người dùng thử lại"
-            );
-          }, 2000); // Hiển thị lỗi trong 2 giây rồi reset
+            resetAllState();
+          }, settings.errorMessageDelay); // Hiển thị lỗi trong 5 giây rồi reset
         }
       })
       .catch((error) => {
         console.log("❌ [CHECKIN_API] LỖI API Checkinv4:", error);
         console.log("🔧 [CHECKIN_API] Kiểm tra kết nối đến API server");
         setLoadingDataScan(false);
-        message.destroy();
-        message.error(error.toString());
         refCallingApi.current = false;
         setIsCallingApi(false);
+
+        // Parse error message
+        let errorMessage = "Lỗi khi check-in. Vui lòng thử lại.";
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.Message
+        ) {
+          errorMessage = error.response.data.Message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.toString) {
+          errorMessage = error.toString();
+        }
+
+        setStatusRes({
+          message: errorMessage,
+          type: TYPE.ERROR,
+          Score: score,
+        });
+
+        // Reset state sau khi hiển thị lỗi
+        setTimeout(() => {
+          resetAllState();
+        }, settings.errorMessageDelay);
       });
+  };
+
+  const resetAllState = () => {
+    console.log("🧹 [RESET] Reset toàn bộ state về trạng thái ban đầu...");
+    setCurrentCheckin({});
+    currentRefCheckin.current = null;
+    setStatusRes({
+      message: settings.defaultMessages.waitingCard,
+      type: TYPE.ERROR,
+      Score: null,
+    });
+    setStateScan(0);
+    setShowCardImage(false);
+    setLoadingDataScan(false);
+    setdelayCC(0);
+    setFaceRetryCount(0);
+    setFaceStatus({
+      status: "idle",
+      message: settings.defaultMessages.waitingFaceServer,
+    });
+    refCallingApi.current = false;
+    setIsCallingApi(false);
+    faceServerService.stopCapture();
+    console.log("✅ [RESET] Đã reset xong, sẵn sàng cho lần tiếp theo");
   };
 
   const logEventErrorSocket = (event) => {
@@ -620,7 +753,18 @@ export default function CheckinOut() {
       hasAnhChanDung: !!img,
     });
 
+    // Kiểm tra thẻ còn trên thiết bị
+    if (!currentRefCheckin.current || !currentRefCheckin.current.SoCMND) {
+      console.log("⚠️ [FACE_COMPARE] Thẻ đã được lấy ra, bỏ qua so sánh");
+      return;
+    }
+
     setLoadingDataScan(true);
+    setStatusRes({
+      message: "Đang xác thực thông tin",
+      type: null,
+      Score: null,
+    });
     setCurrentCheckin({ ...currentRefCheckin.current, FaceImg: img });
     refCallingApi.current = true;
     setIsCallingApi(true);
@@ -667,34 +811,64 @@ export default function CheckinOut() {
           console.log("✅ [FACE_COMPARE] So khớp khuôn mặt THÀNH CÔNG!");
           console.log("🔄 [FACE_COMPARE] Chuyển sang xử lý check-in...");
           setStateScan(STATE_SCAN.SUCCESS);
+          setFaceRetryCount(0); // Reset retry counter khi thành công
           // Set status thành công ngay lập tức để hiển thị CSS success
           setStatusRes({
-            message: "Đang xử lý check-in...",
+            message: "Khuôn mặt khớp. Đang xử lý check-in...",
             type: TYPE.SUCCESS,
             Score: scoreNum,
           });
           CheckIn(currentCheckin, scoreNum);
+          setLoadingDataScan(false);
         } else {
+          setLoadingDataScan(false);
           console.log("❌ [FACE_COMPARE] So khớp khuôn mặt THẤT BẠI");
           console.log(
             `📊 [FACE_COMPARE] Điểm số quá thấp: ${scoreNum} <= ${scoreCompareFace}`
           );
-          console.log(
-            `⚠️ [FACE_COMPARE] Debug: scoreNum=${scoreNum}, scoreCompareFace=${scoreCompareFace}, comparison=${
-              scoreNum > scoreCompareFace
-            }`
-          );
+
+          // Kiểm tra số lần retry
+          const newRetryCount = faceRetryCount + 1;
+          setFaceRetryCount(newRetryCount);
+
+          if (newRetryCount >= settings.maxFaceRetryCount) {
+            console.log(
+              `❌ [FACE_COMPARE] Đã retry ${newRetryCount} lần, dừng lại`
+            );
+            setStatusRes({
+              message: `Khuôn mặt không khớp sau ${settings.maxFaceRetryCount} lần thử. Vui lòng quét lại thẻ.`,
+              type: TYPE.ERROR,
+              Score: scoreNum,
+            });
+            refCallingApi.current = false;
+            setIsCallingApi(false);
+            // Reset sau 5 giây
+            setTimeout(() => {
+              resetAllState();
+            }, settings.errorMessageDelay);
+            return;
+          }
+
           handleRetryDelay();
           setTimeout(() => {
+            // Kiểm tra thẻ còn trên thiết bị trước khi retry
+            if (
+              !currentRefCheckin.current ||
+              !currentRefCheckin.current.SoCMND
+            ) {
+              console.log("⚠️ [FACE_COMPARE] Thẻ đã được lấy ra, dừng retry");
+              resetAllState();
+              return;
+            }
+
             console.log("🔄 [FACE_COMPARE] Reset ảnh và trạng thái...");
             setCurrentCheckin({ ...currentRefCheckin.current, FaceImg: "" });
             setStateScan(STATE_SCAN.ERROR);
-            setLoadingDataScan(false);
+
             refCallingApi.current = false;
             setIsCallingApi(false);
             setStatusRes({
-              message:
-                res?.data?.Status || settings.defaultMessages.faceNotMatch,
+              message: `Khuôn mặt không khớp. Đang thử lại lần ${newRetryCount}/${settings.maxFaceRetryCount}...`,
               type: TYPE.ERROR,
               Score: scoreNum,
             });
@@ -704,9 +878,11 @@ export default function CheckinOut() {
               `⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`
             );
             setTimeout(() => {
+              // Kiểm tra lại trước khi start capture
               if (
                 currentRefCheckin.current &&
-                currentRefCheckin.current.SoCMND
+                currentRefCheckin.current.SoCMND &&
+                faceServerService.isConnected
               ) {
                 console.log(
                   "📷 [FACE_COMPARE] Khởi động capture lại sau thất bại"
@@ -719,19 +895,38 @@ export default function CheckinOut() {
       })
       .catch((err) => {
         console.log("❌ [FACE_COMPARE] Lỗi API CompareFace:", err);
-        console.log("🔧 [FACE_COMPARE] Kiểm tra API server trên port 8010");
-        handleRetryDelay();
+        setLoadingDataScan(false);
         refCallingApi.current = false;
         setIsCallingApi(false);
-        setLoadingDataScan(false);
-        // Cho phép chụp lại sau khi lỗi
+
+        // Kiểm tra thẻ còn trên thiết bị
+        if (!currentRefCheckin.current || !currentRefCheckin.current.SoCMND) {
+          console.log("⚠️ [FACE_COMPARE] Thẻ đã được lấy ra, dừng retry");
+          resetAllState();
+          return;
+        }
+
+        setStatusRes({
+          message: "Lỗi khi so sánh khuôn mặt. Vui lòng thử lại.",
+          type: TYPE.ERROR,
+          Score: null,
+        });
+
+        // Cho phép chụp lại sau khi lỗi (chỉ 1 lần)
         console.log(
           `⏳ [FACE_COMPARE] Chờ ${settings.retryCaptureDelay}ms trước khi chụp lại...`
         );
         setTimeout(() => {
-          if (currentRefCheckin.current && currentRefCheckin.current.SoCMND) {
+          // Kiểm tra lại trước khi start capture
+          if (
+            currentRefCheckin.current &&
+            currentRefCheckin.current.SoCMND &&
+            faceServerService.isConnected
+          ) {
             console.log("📷 [FACE_COMPARE] Khởi động capture lại sau lỗi");
             faceServerService.startCapture();
+          } else {
+            resetAllState();
           }
         }, settings.retryCaptureDelay);
       });
@@ -877,6 +1072,7 @@ export default function CheckinOut() {
                 hoVaTen={currentCheckin.HoVaTen}
                 soCMND={currentCheckin.SoCMND}
                 checkinAt={currentCheckin.checkinAt}
+                gender={currentCheckin.GioiTinh}
               />
             </div>
           </div>

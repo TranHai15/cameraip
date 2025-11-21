@@ -8,12 +8,12 @@ const StatusMessage2 = ({ message, type }) => {
     switch (type) {
       case "waiting":
         return {
-          color: "#d4380d", // Dark Red/Orange - Đỏ cam đậm
+          color: "#ffffff", // Dark Red/Orange - Đỏ cam đậm
           bg: "#fff2e8", // Light Orange Background - Nền cam nhạt
         };
       case "adjusting":
         return {
-          color: "#d46b08", // Dark Orange - Cam đậm
+          color: "#ffffff", // Dark Orange - Cam đậm
           bg: "#fffbe6", // Light Yellow Background - Nền vàng nhạt
         };
       case "ready":
@@ -23,22 +23,22 @@ const StatusMessage2 = ({ message, type }) => {
         };
       case "capturing":
         return {
-          color: "#096dd9", // Dark Blue - Xanh dương đậm
+          color: "#ffffff", // Dark Blue - Xanh dương đậm
           bg: "#e6f7ff", // Light Blue Background - Nền xanh dương nhạt
         };
       case "error":
         return {
-          color: "#cf1322", // Dark Red - Đỏ đậm
+          color: "#ffffff", // Dark Red - Đỏ đậm
           bg: "#fff1f0", // Light Red Background - Nền đỏ nhạt
         };
       default:
         return {
-          color: "#595959", // Dark Gray - Xám đậm
+          color: "#ffffff", // Dark Gray - Xám đậm
           bg: "#f5f5f5", // Light Gray Background - Nền xám nhạt
         };
     }
   };
-  const status = getStatusColor("ready");
+  const status = getStatusColor(type || "idle");
 
   return (
     <StatusMessageWrapper

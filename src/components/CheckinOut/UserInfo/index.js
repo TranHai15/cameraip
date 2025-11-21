@@ -9,7 +9,17 @@ const shortenNumberString = (str) => {
   return str.slice(0, 3) + "........." + str.slice(-3);
 };
 
-const UserInfo = ({ hoVaTen, soCMND, checkinAt, statusMessage }) => {
+const UserInfo = ({ hoVaTen, soCMND, checkinAt, statusMessage, gender }) => {
+  const genderText = (gender) => {
+    switch (gender) {
+      case "Nam":
+        return "Ông";
+      case "Nữ":
+        return "Bà";
+      default:
+        return "";
+    }
+  };
   return (
     <UserInfoWrapper>
       {statusMessage}
@@ -17,7 +27,7 @@ const UserInfo = ({ hoVaTen, soCMND, checkinAt, statusMessage }) => {
         className="greeting-name"
         style={{ fontSize: "1.5rem", fontWeight: "bold", height: "20px" }}
       >
-        {hoVaTen || ""}
+        {genderText(gender)} {hoVaTen || ""}
       </div>
       <div className="greeting-cccd">
         <CreditCardOutlined /> Thẻ căn cước:{" "}
