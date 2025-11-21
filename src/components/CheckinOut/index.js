@@ -800,8 +800,15 @@ export default function CheckinOut() {
 
               <div className="face-wrapper">
                 {!shouldShowVideo && !hasCapturedImage && (
-                  <div>
-                    <img src={anhbg} alt="ảnh căn cước" />
+                  <div style={{ marginBottom: "50px" }}>
+                    <img
+                      src={anhbg}
+                      alt="ảnh căn cước"
+                      style={{
+                        transform: "rotate(180deg)",
+                        marginBottom: "10px",
+                      }}
+                    />
                   </div>
                 )}
                 {/* Module 1: Ảnh căn cước - Chỉ hiển thị trong 2s đầu sau khi quét thẻ */}

@@ -19,7 +19,13 @@ const CapturedImage = ({
             isSuccess ? "success" : isError ? "error" : ""
           }`}
         >
-          <Avatar size={size} src={imageSrc} className="captured-avatar" />
+          <Avatar
+            size={size}
+            src={imageSrc}
+            style={{ padding: "60px", borderRadius: "50%" }}
+            className="captured-avatar"
+            shape="circle"
+          />
         </div>
       )}
       {/* <p>Ảnh chụp</p> */}
